@@ -1,0 +1,14 @@
+{
+ "name": "Cap du Jour",
+ "short_name": "Cap du Jour",
+ "id": "./",
+ "display": "standalone",
+ "background_color": "#121216",
+ "theme_color": "#121216",
+ "start_url": "./",
+ "scope": "./",
+ "icons": [
+  {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+  {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+ ]
+}

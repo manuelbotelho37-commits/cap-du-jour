@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121216">
+<title>Cap du Jour</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  /* Écran d'ouverture : la boussole, puis on ouvre l'appli Cap du Jour (hébergée sur Claude) */
+  html,body{height:100%;margin:0}
+  body{background:radial-gradient(circle at 35% 25%,#2a2930,#101014 70%);color:#e9d9a6;font-family:Georgia,'Times New Roman',serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;box-sizing:border-box;text-align:center}
+  img{width:150px;height:150px;border-radius:36px;box-shadow:0 14px 30px #000a}
+  h1{margin:0;font-weight:normal;font-size:2rem}
+  a{display:inline-block;margin-top:6px;padding:14px 28px;border-radius:14px;border:1px solid #c89b3c;color:#f3dfa2;text-decoration:none;font-family:system-ui,sans-serif;font-size:1.05rem}
+  p{margin:0;color:#9a9482;font-family:system-ui,sans-serif;font-size:.95rem}
+</style>
+</head>
+<body>
+  <img src="icon-512.png" alt="">
+  <h1>Cap du Jour</h1>
+  <p id="msg">Ouverture…</p>
+  <a id="go" href="https://claude.ai/artifact/QEATigsR6LBAQknyLCTSsS">Ouvrir Cap du Jour</a>
+<script>
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Lancée depuis l'icône (mode appli) : on ouvre directement la synthèse
+  const app = matchMedia('(display-mode: standalone)').matches;
+  if (app) setTimeout(() => location.href = document.getElementById('go').href, 700);
+  else document.getElementById('msg').textContent = 'Menu ⋮ de Chrome → « Ajouter à l’écran d’accueil » → Installer';
+</script>
+</body>
+</html>
