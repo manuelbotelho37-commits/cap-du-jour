@@ -1,0 +1,36 @@
+name: Radar But - matchs en direct
+# Toutes les 5 minutes (GitHub ne permet pas moins), puis le robot tourne en boucle
+# et met à jour live.json chaque minute sur la branche radar-data.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['radar-but/robot/**', '.github/workflows/radar-but.yml']
+permissions:
+  contents: write
+concurrency:
+  group: radar-but
+  cancel-in-progress: false
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: radar-but/robot, path: src }
+      - name: Boucle de 5 minutes
+        run: |
+          mkdir out && cd out
+          git init -q && git checkout -q -b radar-data
+          git config user.name "radar-but-robot" && git config user.email "radar-but-robot@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git fetch -q --depth 1 origin radar-data && git checkout -q FETCH_HEAD -- standings.json 2>/dev/null || true
+          for i in 1 2 3 4 5; do
+            node ../src/radar-but/robot/fetch.mjs || true
+            git add -A && git commit -q -m "matchs en direct" --allow-empty
+            git push -q -f origin radar-data || true
+            git reset -q --soft HEAD~1 2>/dev/null || git update-ref -d HEAD
+            [ $i -lt 5 ] && sleep 55
+          done
