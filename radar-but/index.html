@@ -590,9 +590,9 @@ function detailView(){
     h += `<div class="box"><h3>Stats du match</h3><p class="note">Le flux n'a pas encore publié les stats de ce match. Elles apparaîtront à une prochaine actualisation.</p></div>`;
   }
   if(m.events.length) h += `<div class="box"><h3>Faits du match</h3>${m.events.map(e => `<div class="ev"><span class="t">${esc(e.t)}′</span><span>${e.type==='Goal'?'⚽':'🟨'} ${esc(e.p || '')} <span style="color:var(--dim)">(${esc(e.tm || '')})</span></span></div>`).join('')}</div>`;
-  const q = encodeURIComponent('flashscore ' + (m.hfull || m.h) + ' ' + (m.afull || m.a));
+  const q = encodeURIComponent('\\ site:flashscore.fr ' + (m.hfull || m.h) + ' ' + (m.afull || m.a));
   h += `<div class="books" style="grid-template-columns:1fr 1fr">
-    <a href="https://www.google.com/search?btnI=1&q=${q}" target="_blank" rel="noopener">Flashscore ↗</a>
+    <a href="https://duckduckgo.com/?q=${q}" target="_blank" rel="noopener">Flashscore ↗</a>
     <a href="${esc(m.url || 'https://www.espn.com/soccer/match/_/gameId/' + m.id)}" target="_blank" rel="noopener">Match en direct ↗</a></div>`;
   return h;
 }
