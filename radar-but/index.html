@@ -225,13 +225,15 @@ const fr = n => String(n).replace('.', ',');
 
 /* ---------- état sauvegardé sur le téléphone ---------- */
 function load(){ try{ return JSON.parse(localStorage.getItem(STORE) || 'null'); }catch(e){ return null; } }
-let S = Object.assign({every:2, threshold:75, notify:false, alerts:[], demo:false}, load() || {});
+let S = Object.assign({every:1, threshold:75, notify:false, alerts:[], demo:false}, load() || {});
+if(!S.v2){ S.every = 1; S.v2 = true; }
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
 const today = () => new Date().toISOString().slice(0,10);
 
 let ui = {tab:'live', match:null, filter:'Tous', loading:false, error:'', lastAt:null, upcoming:[]};
 let STAND = {};        /* classement par championnat : {ligue: {at, t:{idÉquipe:{r,pts,gp,gf,ga}}}} */
 try{ STAND = JSON.parse(localStorage.getItem('radarbut_stand') || '{}') || {}; }catch(e){}
+let ODDS = {};         /* historique de la cote juste par match : {id: [{min, o}]} */
 let LIVE = [];          /* matchs en cours, enrichis */
 let STATS = {};         /* stats par match : {fixtureId: {at, home:{...}, away:{...}}} */
 
@@ -346,6 +348,11 @@ async function refresh(){
       await loadStandings([...new Set(live.map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))]);
     }
     LIVE.forEach(m => m.mod = model(m));
+    LIVE.forEach(m => {
+      const o = fairOdds(m.mod.pEnd), h = ODDS[m.id] = ODDS[m.id] || [];
+      if(o && (!h.length || h[h.length - 1].min !== m.min || h[h.length - 1].o !== o)) h.push({min:m.min, o});
+      if(h.length > 120) h.shift();
+    });
     trackAlerts(prev);
     ui.lastAt = new Date();
   }catch(e){ ui.error = e.message; }
@@ -382,6 +389,24 @@ function notify(m){
 }
 
 /* ---------- dessin ---------- */
+/* cote juste = 1 / probabilité : la cote à partir de laquelle le pari devient intéressant selon le modèle */
+function fairOdds(p){ return p > 0 && p < 100 ? Math.round(100 / p * 100) / 100 : null; }
+function fo(o){ return o ? o.toFixed(2).replace('.', ',') : '–'; }
+function oddsTrend(id){
+  const h = ODDS[id] || []; if(h.length < 2) return '';
+  const d = h[h.length - 1].o - h[h.length - 2].o;
+  return d < 0 ? '<span class="trend up">▼</span>' : d > 0 ? '<span class="trend down">▲</span>' : '';
+}
+function oddsChart(id){
+  const h = ODDS[id] || []; if(h.length < 2) return '<p class="note">La courbe se remplit minute après minute tant que l’appli est ouverte.</p>';
+  const W = 340, H = 110, pl = 34, pb = 18, pt = 8, vals = h.map(x => x.o), lo = Math.min(...vals), hi = Math.max(...vals), span = (hi - lo) || 0.1;
+  const X = i => pl + (W - pl - 6) * i / (h.length - 1), Y = v => pt + (H - pt - pb) * (hi - v) / span;
+  let g = [lo, hi].map(v => `<line x1="${pl}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="#1E3A50"/><text x="${pl - 6}" y="${Y(v) + 3}" font-size="9" fill="#8CA5B9" text-anchor="end">${fo(v)}</text>`).join('');
+  g += `<polyline points="${h.map((x, i) => X(i).toFixed(1) + ',' + Y(x.o).toFixed(1)).join(' ')}" fill="none" stroke="#E2B84F" stroke-width="2" stroke-linejoin="round"/>`;
+  g += `<circle cx="${X(h.length - 1)}" cy="${Y(h[h.length - 1].o)}" r="3.5" fill="#E2B84F"/>`;
+  g += `<text x="${pl}" y="${H - 4}" font-size="9" fill="#8CA5B9">${h[0].min}′</text><text x="${W}" y="${H - 4}" font-size="9" fill="#8CA5B9" text-anchor="end">${h[h.length - 1].min}′</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Évolution de la cote juste">${g}</svg>`;
+}
 function heat(i){ return i >= 75 ? 'var(--gold)' : i >= 55 ? '#C9A35A' : 'var(--dim)'; }
 function ring(v, size, stroke){
   const r = (size - stroke) / 2, c = 2 * Math.PI * r, off = c * (1 - v / 100);
@@ -428,7 +453,7 @@ function liveView(){
     <div class="m">${standOf(top.lg, top.hid) ? esc(top.h) + ' ' + ord(standOf(top.lg, top.hid).r) + ' · ' + esc(top.a) + ' ' + ord((standOf(top.lg, top.aid) || {}).r || 0) + ' au classement' : ''}</div></div></div>
     <div class="hero-foot"><div class="kpi"><b class="num">${top.mod.p10} %</b><span>but dans 10 min</span></div>
     <div class="kpi"><b class="num">${top.mod.p20} %</b><span>but dans 20 min</span></div>
-    <div class="kpi"><b class="num">${top.mod.pEnd} %</b><span>but avant la fin</span></div></div></button>`;
+    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(fairOdds(top.mod.pEnd))}</b><span>cote juste du prochain but</span></div></div></button>`;
   h += `<div class="sec"><h2>Classement live</h2><button class="small-btn" onclick="refresh()">${ui.loading?'…':'Actualiser'}</button></div><div class="list">`;
   list.forEach((m, i) => {
     const st = STATS[m.id] && STATS[m.id].s;
@@ -437,7 +462,7 @@ function liveView(){
       <div class="lg"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span>${esc(m.lgName)} · ${esc(LEAGUE(m.lg).c)}</div>
       <div class="row-team"><span>${esc(m.h)}${rk(m.lg, m.hid)}</span><span class="sc">${m.gh}</span></div>
       <div class="row-team"><span>${esc(m.a)}${rk(m.lg, m.aid)}</span><span class="sc">${m.ga}</span></div>
-      <div class="tags">${tags}${m.mod.idx >= S.threshold ? '<span class="tag hot">Chaud</span>' : ''}</div></div>
+      <div class="tags"><span class="tag val">Prochain but ${fo(fairOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</span>${tags}${m.mod.idx >= S.threshold ? '<span class="tag hot">Chaud</span>' : ''}</div></div>
       ${ring(m.mod.idx, 58, 6)}</button>`;
   });
   return h + `</div>`;
@@ -466,6 +491,14 @@ function detailView(){
     <div class="prob"><b class="num">${mod.p10} %</b><span>dans les 10 min</span></div>
     <div class="prob"><b class="num">${mod.pHt != null ? mod.pHt + ' %' : mod.p20 + ' %'}</b><span>${mod.pHt != null ? 'avant la mi-temps' : 'dans les 20 min'}</span></div>
     <div class="prob"><b class="num" style="color:var(--gold)">${mod.pEnd} %</b><span>avant la fin</span></div></div></div>
+  <div class="box"><h3>Cote du prochain but <span>mise à jour chaque minute</span></h3>
+    <div class="value">
+      <div><b class="num" style="color:var(--gain)">${fo(fairOdds(mod.pEnd))} ${oddsTrend(m.id)}</b><span>but avant la fin</span></div>
+      <div><b class="num">${fo(fairOdds(mod.p20))}</b><span>but dans 20 min</span></div>
+      <div><b class="num">${fo(fairOdds(mod.p10))}</b><span>but dans 10 min</span></div>
+    </div>
+    ${oddsChart(m.id)}
+    <p class="note">C'est la cote « juste » calculée par le modèle (1 ÷ probabilité). Si ton bookmaker propose plus haut pour le même pari, le modèle le juge intéressant. Plus bas, il vaut mieux passer.</p></div>
   <div class="box"><h3>Pourquoi cet indice <span>ce qui pèse</span></h3><div class="why">
     ${mod.why.map(([t, w]) => `<div class="why-row"><span>${esc(t)}</span><span class="w ${w<0?'neg':''}">${w>0?'+':''}${w}</span><div class="track"><div class="${w<0?'neg':''}" style="width:${Math.abs(w)/maxW*100}%"></div></div></div>`).join('')}
   </div></div>`;
