@@ -237,7 +237,28 @@ const WORLD = ('eng.2 eng.3 eng.4 eng.5 eng.fa eng.league_cup eng.trophy sco.1 s
 const ALL_CODES = LEAGUES.map(l => l.id).concat(WORLD);
 const COUNTRY = {eng:'Angleterre', sco:'Écosse', irl:'Irlande', wal:'Pays de Galles', nir:'Irlande du Nord', fra:'France', ger:'Allemagne', esp:'Espagne', ita:'Italie', ned:'Pays-Bas', por:'Portugal', bel:'Belgique', tur:'Turquie', swe:'Suède', aut:'Autriche', sui:'Suisse', rus:'Russie', ukr:'Ukraine', pol:'Pologne', cze:'Tchéquie', cro:'Croatie', srb:'Serbie', rou:'Roumanie', bul:'Bulgarie', hun:'Hongrie', svk:'Slovaquie', svn:'Slovénie', cyp:'Chypre', isr:'Israël', fin:'Finlande', isl:'Islande', nor:'Norvège', den:'Danemark', gre:'Grèce', uefa:'Europe', fifa:'Monde', club:'Monde', usa:'États-Unis', mex:'Mexique', can:'Canada', concacaf:'Amérique du Nord', bra:'Brésil', arg:'Argentine', col:'Colombie', chi:'Chili', ecu:'Équateur', per:'Pérou', uru:'Uruguay', par:'Paraguay', ven:'Venezuela', bol:'Bolivie', conmebol:'Amérique du Sud', jpn:'Japon', kor:'Corée du Sud', chn:'Chine', aus:'Australie', ksa:'Arabie saoudite', uae:'Émirats', qat:'Qatar', ind:'Inde', tha:'Thaïlande', idn:'Indonésie', mys:'Malaisie', afc:'Asie', rsa:'Afrique du Sud', egy:'Égypte', mar:'Maroc', tun:'Tunisie', alg:'Algérie', nga:'Nigeria', gha:'Ghana', caf:'Afrique'};
 const LNAMES = {};   /* nom renvoyé par ESPN pour les championnats hors favoris */
-const LEAGUE = id => LEAGUES.find(l => l.id === id) || {id, n:LNAMES[id] || id, c:COUNTRY[String(id).split('.')[0]] || ''};
+const LCOUNTRY = {};  /* pays des compétitions venues de LiveScore */
+const LEAGUE = id => LEAGUES.find(l => l.id === id) || {id, n:LNAMES[id] || id, c:LCOUNTRY[id] || COUNTRY[String(id).split('.')[0]] || ''};
+/* deuxième source gratuite : LiveScore, qui suit en direct beaucoup plus de matchs (divisions inférieures, coupes, réserves…) */
+const LSAPI = 'https://prod-public-api.livescore.com/v1/api/app/live/soccer/1?MD=1';
+const FR_C = {England:'Angleterre', Spain:'Espagne', Italy:'Italie', Germany:'Allemagne', France:'France', Netherlands:'Pays-Bas', Portugal:'Portugal', Belgium:'Belgique', Scotland:'Écosse', Wales:'Pays de Galles', Ireland:'Irlande', 'Northern Ireland':'Irlande du Nord', Norway:'Norvège', Denmark:'Danemark', Sweden:'Suède', Greece:'Grèce', Turkey:'Turquie', Switzerland:'Suisse', Austria:'Autriche', Brazil:'Brésil', Argentina:'Argentine', Ecuador:'Équateur', Colombia:'Colombie', Chile:'Chili', Peru:'Pérou', Uruguay:'Uruguay', Paraguay:'Paraguay', Mexico:'Mexique', USA:'États-Unis', Japan:'Japon', 'South Korea':'Corée du Sud', China:'Chine', Australia:'Australie', 'Saudi Arabia':'Arabie saoudite', Egypt:'Égypte', Morocco:'Maroc', Algeria:'Algérie', Tunisia:'Tunisie', Poland:'Pologne', 'Czech Republic':'Tchéquie', Croatia:'Croatie', Serbia:'Serbie', Romania:'Roumanie', Hungary:'Hongrie', Bulgaria:'Bulgarie', Russia:'Russie', Ukraine:'Ukraine', Israel:'Israël', Cyprus:'Chypre', Finland:'Finlande', Iceland:'Islande', World:'Monde', Europe:'Europe', 'South America':'Amérique du Sud', Africa:'Afrique', Asia:'Asie'};
+const slug = x => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const norm = x => ' ' + slug(x).replace(/-/g, ' ').replace(/\b(fc|cf|afc|sc|ac|cd|ud|sd|club|de|the|w|women|femenino|u\d+|ii|b)\b/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+const same = (a, b) => { const x = norm(a), y = norm(b); return x.length > 2 && y.length > 2 && (x.includes(y) || y.includes(x)); };
+function lsMatches(j){
+  const out = [];
+  (j.Stages || []).forEach(st => (st.Events || []).forEach(ev => {
+    const eps = String(ev.Eps || ''), ht = eps === 'HT', mm = /^(\d+)(?:\+(\d+))?'?$/.exec(eps);
+    if(!ht && !mm) return;   /* pas commencé, terminé, reporté… */
+    const lg = 'ls:' + (st.Ccd || slug(st.Cnm)) + '.' + (st.Scd || slug(st.Snm));
+    LNAMES[lg] = st.CompN || st.Snm; LCOUNTRY[lg] = FR_C[st.Cnm] || st.Cnm || '';
+    const h = ev.T1 && ev.T1[0], a = ev.T2 && ev.T2[0]; if(!h || !a) return;
+    out.push({id:'ls' + ev.Eid, src:'ls', url:'https://www.livescore.com/en/football/' + (st.Ccd || slug(st.Cnm)) + '/' + (st.Scd || slug(st.Snm)) + '/' + slug(h.Nm) + '-vs-' + slug(a.Nm) + '/' + ev.Eid + '/',
+      hfull:h.Nm, afull:a.Nm, lg, lgName:LNAMES[lg], hid:'ls' + (h.ID || h.Nm), aid:'ls' + (a.ID || a.Nm), h:h.Nm, a:a.Nm,
+      gh:+ev.Tr1 || 0, ga:+ev.Tr2 || 0, min:ht ? 45 : (+mm[1] + (mm[2] ? +mm[2] : 0)), status:ht ? 'HT' : 'LIVE', events:[]});
+  }));
+  return out;
+}
 const isFav = id => LEAGUES.some(l => l.id === id);
 const LNAME = Object.fromEntries(LEAGUES.map(l => [l.id, l.n]));
 const STORE = 'radarbut_v1';
@@ -388,6 +409,7 @@ async function refresh(){
     else {
       const full = !ui.fullAt || Date.now() - ui.fullAt > 5 * 60e3 || !ui.active.length;
       const codes = full ? ALL_CODES : [...new Set(LEAGUES.map(l => l.id).concat(ui.active))];
+      const lsP = getJSON(LSAPI).then(j => { ui.ls = 'ok'; return lsMatches(j); }).catch(e => { ui.ls = 'bloquée (' + (e.status || e.message) + ')'; return null; });
       const list = codes.filter(id => !BAD[id] || isFav(id));
       const res = await pool(list, 6, id => getJSON(API + id + '/scoreboard').then(j => {
         const L = j.leagues && j.leagues[0];
@@ -411,7 +433,9 @@ async function refresh(){
       });
       if(full) ui.fullAt = Date.now();
       ui.active = [...active];
-      if(!favOk && fails === list.length){ ui.fullAt = 0; const st = (res.find(r => r.reason && r.reason.status) || {}).reason; throw new Error('Impossible de lire le flux des matchs' + (st ? ' (code ' + st.status + ')' : '') + '. Nouvel essai dans une minute.'); }
+      const lsl = await lsP;
+      if(lsl) lsl.forEach(x => { if(!live.some(m => same(m.hfull || m.h, x.h) && same(m.afull || m.a, x.a))) live.push(x); });
+      if(!lsl && !favOk && fails === list.length){ ui.fullAt = 0; const st = (res.find(r => r.reason && r.reason.status) || {}).reason; throw new Error('Impossible de lire le flux des matchs' + (st ? ' (code ' + st.status + ')' : '') + '. Nouvel essai dans une minute.'); }
       LIVE = live;
       if(full || !ui.upcoming.length) ui.upcoming = next.filter(u => isFav(u.lg)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12);
       await loadStandings([...new Set(live.filter(m => !S.hidden[m.id]).map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))].slice(0, 25));
@@ -652,7 +676,7 @@ function clearHist(b){
 function setView(){
   let h = header('Réglages');
   h += `<div class="box" style="margin-top:0"><h3>Source des matchs <span>gratuite, sans compte</span></h3>
-    <p class="note" style="margin-top:0">Les scores et les stats viennent du flux public d'ESPN : tous les matchs en direct qu'il suit dans le monde (environ ${ALL_CODES.length} championnats et coupes). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
+    <p class="note" style="margin-top:0">Les matchs viennent de deux flux publics gratuits : LiveScore (presque tous les matchs du monde, même les petites divisions) et ESPN (stats détaillées et classements). LiveScore : ${ui.ls || 'pas encore testé'}. ESPN : tous les matchs en direct qu'il suit dans le monde (environ ${ALL_CODES.length} championnats et coupes). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
     ${Object.keys(S.hidden).length ? `<button class="btn ghost" onclick="unhideAll()">Réafficher les matchs retirés (${Object.keys(S.hidden).length})</button>` : ''}</div>
   <div class="box"><h3>Actualisation</h3>
     <div class="field"><label for="every">Actualiser toutes les</label><select class="in" id="every" onchange="S.every=+this.value;save();schedule();render()">${[1,2,5].map(v => `<option ${S.every===v?'selected':''} value="${v}">${v} min</option>`).join('')}</select></div></div>
