@@ -189,6 +189,11 @@ nav.tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1
 .ev{display:flex;gap:10px;font-size:.86rem;padding:6px 0;border-top:1px solid rgba(35,66,90,.7)}
 .ev:first-child{border-top:0}
 .ev .t{font-family:var(--mono);color:var(--dim);width:38px;flex:none}
+.rank{font-family:var(--body);font-weight:500;font-size:.72rem;color:var(--dim);margin-left:6px}
+.tbl{width:100%;border-collapse:collapse;font-size:.86rem}
+.tbl th{color:var(--dim);font-weight:600;font-size:.72rem;text-align:right;padding:0 0 6px}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl td{padding:7px 0;text-align:right;border-top:1px solid rgba(35,66,90,.7);font-variant-numeric:tabular-nums}
 .small-btn{border:1.5px solid var(--line);background:var(--panel2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:.85rem;color:var(--ink)}
 </style>
 
@@ -211,6 +216,7 @@ const LEAGUES = [
   {id:'den.1', n:'Superliga',      c:'Danemark'},
   {id:'gre.1', n:'Super League',   c:'Grèce'},
 ];
+const LEAGUE = id => LEAGUES.find(l => l.id === id) || {n:id, c:''};
 const LNAME = Object.fromEntries(LEAGUES.map(l => [l.id, l.n]));
 const STORE = 'radarbut_v1';
 const $ = s => document.querySelector(s);
@@ -224,6 +230,8 @@ function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){
 const today = () => new Date().toISOString().slice(0,10);
 
 let ui = {tab:'live', match:null, filter:'Tous', loading:false, error:'', lastAt:null, upcoming:[]};
+let STAND = {};        /* classement par championnat : {ligue: {at, t:{idÉquipe:{r,pts,gp,gf,ga}}}} */
+try{ STAND = JSON.parse(localStorage.getItem('radarbut_stand') || '{}') || {}; }catch(e){}
 let LIVE = [];          /* matchs en cours, enrichis */
 let STATS = {};         /* stats par match : {fixtureId: {at, home:{...}, away:{...}}} */
 
@@ -262,6 +270,13 @@ function model(m){
   } else {
     why.push(['Stats détaillées pas encore chargées (rythme moyen utilisé)', 0]);
   }
+  const H = standOf(m.lg, m.hid), A = standOf(m.lg, m.aid);
+  if(H && A && H.gp > 2 && A.gp > 2){
+    const gpm = ((H.gf + H.ga) / H.gp + (A.gf + A.ga) / A.gp) / 2;
+    const k = Math.max(0.8, Math.min(1.25, gpm / 2.7));
+    f *= k;
+    why.push(['Avant-match : leurs matchs font ' + fr(gpm.toFixed(1)) + ' buts en moyenne (' + ord(H.r) + ' contre ' + ord(A.r) + ')', Math.round((k - 1) * 40)]);
+  }
   const diff = Math.abs(m.gh - m.ga);
   if(diff === 0){ f *= 1.05; why.push(['Score nul : les deux équipes peuvent pousser', 4]); }
   else if(diff === 1){ f *= 1.08; why.push(['Un but d’écart : l’équipe menée attaque', 6]); }
@@ -285,10 +300,27 @@ function toMatch(ev, lg){
   const s = readStats(c.competitors);
   if(s) STATS[ev.id] = {at:Date.now(), s};
   const tn = t => t.team.shortDisplayName || t.team.displayName;
-  return {id:ev.id, lg:lg.id, lgName:lg.n, h:tn(h), a:tn(a),
+  return {id:ev.id, lg:lg.id, lgName:lg.n, hid:h.team.id, aid:a.team.id, h:tn(h), a:tn(a),
     gh:+h.score || 0, ga:+a.score || 0, min:ht ? 45 : clock + (extra ? +extra[1] : 0), status:ht ? 'HT' : 'LIVE',
     events:(c.details || []).filter(d => d.scoringPlay || /card/i.test((d.type && d.type.text) || '')).map(d => ({t:((d.clock && d.clock.displayValue) || '').replace("'", ''), type:d.scoringPlay ? 'Goal' : 'Card', p:d.athletesInvolved && d.athletesInvolved[0] && d.athletesInvolved[0].displayName, tm:(d.team && d.team.id) === h.team.id ? tn(h) : tn(a)}))};
 }
+async function loadStandings(ids){
+  const need = ids.filter(id => !STAND[id] || Date.now() - STAND[id].at > 6 * 3600e3);
+  await Promise.allSettled(need.map(async id => {
+    const j = await getJSON('https://site.api.espn.com/apis/v2/sports/soccer/' + id + '/standings');
+    const entries = (j.children && j.children[0] && j.children[0].standings && j.children[0].standings.entries) || (j.standings && j.standings.entries) || [];
+    const t = {};
+    entries.forEach(e => {
+      const v = k => { const x = (e.stats || []).find(z => z.name === k); return x ? +x.value || +x.displayValue || 0 : 0; };
+      t[e.team.id] = {r:v('rank'), pts:v('points'), gp:v('gamesPlayed'), gf:v('pointsFor'), ga:v('pointsAgainst'), name:e.team.shortDisplayName || e.team.displayName};
+    });
+    if(entries.length) STAND[id] = {at:Date.now(), t, n:entries.length};
+  }));
+  try{ localStorage.setItem('radarbut_stand', JSON.stringify(STAND)); }catch(e){}
+}
+function standOf(lg, teamId){ return STAND[lg] && STAND[lg].t[teamId]; }
+function ord(r){ return r === 1 ? '1er' : r + 'e'; }
+function rk(lg, teamId){ const x = standOf(lg, teamId); return x && x.r ? `<span class="rank">${ord(x.r)} · ${x.pts} pts</span>` : ''; }
 async function refresh(){
   if(ui.loading) return;
   ui.loading = true; ui.error = ''; render();
@@ -304,12 +336,14 @@ async function refresh(){
         (r.value.j.events || []).forEach(ev => {
           const state = ev.status && ev.status.type && ev.status.type.state;
           if(state === 'in') live.push(toMatch(ev, r.value.l));
-          else if(state === 'pre') next.push({lg:r.value.l.n, name:ev.name || ev.shortName, date:ev.date});
+          else if(state === 'pre'){ const cs = ev.competitions[0].competitors, H = cs.find(x => x.homeAway === 'home'), A = cs.find(x => x.homeAway === 'away');
+            next.push({lg:r.value.l.id, lgName:r.value.l.n, h:H.team.shortDisplayName || H.team.displayName, a:A.team.shortDisplayName || A.team.displayName, hid:H.team.id, aid:A.team.id, date:ev.date}); }
         });
       });
       if(fails === LEAGUES.length) throw new Error('Impossible de lire le flux des matchs. Vérifie ta connexion.');
       LIVE = live;
-      ui.upcoming = next.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 8);
+      ui.upcoming = next.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12);
+      await loadStandings([...new Set(live.map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))]);
     }
     LIVE.forEach(m => m.mod = model(m));
     trackAlerts(prev);
@@ -335,7 +369,7 @@ function trackAlerts(prev){
   LIVE.forEach(m => {
     if(m.mod.idx < S.threshold || m.status === 'HT' || m.min > 85) return;
     if(S.alerts.some(a => a.id === m.id && !a.res)) return;
-    S.alerts.unshift({id:m.id, at:Date.now(), match:m.h + ' – ' + m.a, lg:m.lgName, min:m.min, score:m.gh + '-' + m.ga, goals:m.gh + m.ga, idx:m.mod.idx, p:m.mod.pEnd, res:null, demo:S.demo});
+    S.alerts.unshift({id:m.id, at:Date.now(), match:m.h + ' – ' + m.a, lg:m.lgName + ' (' + LEAGUE(m.lg).c + ')', min:m.min, score:m.gh + '-' + m.ga, goals:m.gh + m.ga, idx:m.mod.idx, p:m.mod.pEnd, res:null, demo:S.demo});
     notify(m);
   });
   S.alerts = S.alerts.slice(0, 300);
@@ -382,7 +416,7 @@ function liveView(){
   if(ui.error) h += `<div class="err">${esc(ui.error)}</div>`;
   const list = LIVE.filter(m => ui.filter === 'Tous' || m.lgName === ui.filter).sort((a, b) => b.mod.idx - a.mod.idx);
   if(!list.length){
-    const up = ui.upcoming.map(u => `<div class="hist"><span class="when">${new Date(u.date).toLocaleDateString('fr-FR', {weekday:'short'})}<br>${new Date(u.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span><div class="what">${esc(u.name)}<small>${esc(u.lg)}</small></div></div>`).join('');
+    const up = ui.upcoming.map(u => `<div class="hist"><span class="when">${new Date(u.date).toLocaleDateString('fr-FR', {weekday:'short'})}<br>${new Date(u.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span><div class="what">${esc(u.h)}${rk(u.lg, u.hid)} – ${esc(u.a)}${rk(u.lg, u.aid)}<small>${esc(u.lgName)} · ${esc(LEAGUE(u.lg).c)}</small></div></div>`).join('');
     return h + `<div class="empty"><b>${ui.loading ? 'Chargement des matchs…' : 'Aucun match en direct'}</b>${ui.loading ? '' : 'Pas de match en cours dans tes championnats. L’appli vérifie à nouveau toute seule.'}
       <button class="btn ghost" onclick="refresh()">Actualiser</button>${S.demo ? '' : `<button class="btn ghost" onclick="S.demo=true;save();refresh()">Voir le mode démo</button>`}</div>
       ${up ? `<div class="box"><h3>Prochains matchs <span>à l’heure de ton téléphone</span></h3>${up}</div>` : ''}`;
@@ -390,7 +424,8 @@ function liveView(){
   const top = list[0];
   h += `<button class="hero" onclick="openM('${top.id}')"><div class="eyebrow">N°1 en ce moment</div>
     <div class="hero-row">${ring(top.mod.idx, 96, 9)}<div class="hero-teams"><div class="t">${esc(top.h)} – ${esc(top.a)}</div>
-    <div class="m"><span class="min">${top.status==='HT'?'MT':top.min+'′'}</span> · ${esc(top.lgName)} · ${top.gh}-${top.ga}</div></div></div>
+    <div class="m"><span class="min">${top.status==='HT'?'MT':top.min+'′'}</span> · ${top.gh}-${top.ga} · ${esc(top.lgName)} (${esc(LEAGUE(top.lg).c)})</div>
+    <div class="m">${standOf(top.lg, top.hid) ? esc(top.h) + ' ' + ord(standOf(top.lg, top.hid).r) + ' · ' + esc(top.a) + ' ' + ord((standOf(top.lg, top.aid) || {}).r || 0) + ' au classement' : ''}</div></div></div>
     <div class="hero-foot"><div class="kpi"><b class="num">${top.mod.p10} %</b><span>but dans 10 min</span></div>
     <div class="kpi"><b class="num">${top.mod.p20} %</b><span>but dans 20 min</span></div>
     <div class="kpi"><b class="num">${top.mod.pEnd} %</b><span>but avant la fin</span></div></div></button>`;
@@ -399,13 +434,20 @@ function liveView(){
     const st = STATS[m.id] && STATS[m.id].s;
     const tags = st ? `<span class="tag">${st.home.sot + st.away.sot} tirs cadrés</span><span class="tag">${st.home.shots + st.away.shots} tirs</span><span class="tag">${st.home.corners + st.away.corners} corners</span>` : `<span class="tag">stats pas encore publiées</span>`;
     h += `<button class="card" onclick="openM('${m.id}')"><span class="rk">${i+1}</span><div class="mid">
-      <div class="lg"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span>${esc(m.lgName)}</div>
-      <div class="row-team"><span>${esc(m.h)}</span><span class="sc">${m.gh}</span></div>
-      <div class="row-team"><span>${esc(m.a)}</span><span class="sc">${m.ga}</span></div>
+      <div class="lg"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span>${esc(m.lgName)} · ${esc(LEAGUE(m.lg).c)}</div>
+      <div class="row-team"><span>${esc(m.h)}${rk(m.lg, m.hid)}</span><span class="sc">${m.gh}</span></div>
+      <div class="row-team"><span>${esc(m.a)}${rk(m.lg, m.aid)}</span><span class="sc">${m.ga}</span></div>
       <div class="tags">${tags}${m.mod.idx >= S.threshold ? '<span class="tag hot">Chaud</span>' : ''}</div></div>
       ${ring(m.mod.idx, 58, 6)}</button>`;
   });
   return h + `</div>`;
+}
+function standBox(m){
+  const H = standOf(m.lg, m.hid), A = standOf(m.lg, m.aid);
+  if(!H || !A) return `<div class="box"><h3>Classement avant le match</h3><p class="note">Classement pas encore disponible pour ce championnat.</p></div>`;
+  const row = (n, x) => `<tr><td>${ord(x.r)} ${esc(n)}</td><td>${x.pts}</td><td>${x.gp}</td><td>${x.gf}-${x.ga}</td><td>${x.gp ? fr(((x.gf + x.ga) / x.gp).toFixed(1)) : '–'}</td></tr>`;
+  return `<div class="box"><h3>Classement avant le match <span>${esc(m.lgName)}, ${STAND[m.lg].n} équipes</span></h3>
+    <table class="tbl"><tr><th>Équipe</th><th>Pts</th><th>J</th><th>Buts</th><th>Buts/match</th></tr>${row(m.h, H)}${row(m.a, A)}</table></div>`;
 }
 function cmpRow(lbl, a, b, fmt){
   const t = (a + b) || 1, f = fmt || (v => v);
@@ -416,9 +458,10 @@ function detailView(){
   if(!m) return `<button class="back" onclick="ui.match=null;render()">‹ Classement</button><div class="empty"><b>Ce match n'est plus en direct</b></div>`;
   const st = STATS[m.id] && STATS[m.id].s, mod = m.mod, maxW = Math.max(1, ...mod.why.map(w => Math.abs(w[1])));
   let h = `<button class="back" onclick="ui.match=null;render()">‹ Classement</button>
-  <div class="score-head"><div class="lg">${esc(m.lgName)} · <span class="min">${m.status==='HT'?'Mi-temps':m.min+'′'}</span></div>
+  <div class="score-head"><div class="lg">${esc(m.lgName)} (${esc(LEAGUE(m.lg).c)}) · <span class="min">${m.status==='HT'?'Mi-temps':m.min+'′'}</span></div>
     <div class="sh-row"><span class="tm">${esc(m.h)}</span><span class="big num">${m.gh} - ${m.ga}</span><span class="tm">${esc(m.a)}</span></div>
     <div style="display:flex;justify-content:center;margin-top:12px">${ring(mod.idx, 110, 10)}</div></div>
+  ${standBox(m)}
   <div class="box"><h3>Probabilité d'un prochain but <span>estimation du modèle</span></h3><div class="probs">
     <div class="prob"><b class="num">${mod.p10} %</b><span>dans les 10 min</span></div>
     <div class="prob"><b class="num">${mod.pHt != null ? mod.pHt + ' %' : mod.p20 + ' %'}</b><span>${mod.pHt != null ? 'avant la mi-temps' : 'dans les 20 min'}</span></div>
