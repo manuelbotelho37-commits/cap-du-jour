@@ -405,6 +405,9 @@ function verdictHTML(m){
   return edge > 0 ? `<div class="verdict ok">Intéressant : ${fo(v)} est au-dessus de la cote juste (${fo(fair)}), avantage estimé +${edge} %.</div>`
                   : `<div class="verdict ko">À éviter : ${fo(v)} est en dessous de la cote juste (${fo(fair)}).</div>`;
 }
+function copyTeam(name){
+  try{ navigator.clipboard.writeText(name).then(() => toast('« ' + name + ' » copié, colle-le dans la recherche'), () => {}); }catch(e){}
+}
 function verdict(id){ const m = LIVE.find(x => String(x.id) === String(id)); const el = $('#verdict'); if(m && el) el.innerHTML = verdictHTML(m); }
 function oddsTrend(id){
   const h = ODDS[id] || []; if(h.length < 2) return '';
@@ -516,10 +519,11 @@ function detailView(){
       <input class="in" id="seen" inputmode="decimal" placeholder="ex. 1,60" value="${esc((SEEN[m.id] || ''))}" oninput="SEEN['${m.id}']=this.value;verdict('${m.id}')"></div>
     <div id="verdict">${verdictHTML(m)}</div>
     <div class="books">
-      <a href="https://www.winamax.fr/paris-sportifs/live" target="_blank" rel="noopener">Winamax ↗</a>
-      <a href="https://www.betclic.fr/live" target="_blank" rel="noopener">Betclic ↗</a>
-      <a href="https://www.unibet.fr/sport/live" target="_blank" rel="noopener">Unibet ↗</a>
+      <a href="https://www.winamax.fr/paris-sportifs/live" target="_blank" rel="noopener" onclick="copyTeam('${esc(m.h).replace(/'/g, '')}')">Winamax ↗</a>
+      <a href="https://www.betclic.fr/live" target="_blank" rel="noopener" onclick="copyTeam('${esc(m.h).replace(/'/g, '')}')">Betclic ↗</a>
+      <a href="https://www.unibet.fr/sport/live" target="_blank" rel="noopener" onclick="copyTeam('${esc(m.h).replace(/'/g, '')}')">Unibet ↗</a>
     </div>
+    <p class="note">En touchant un bookmaker, le nom « ${esc(m.h)} » est copié : colle-le dans sa recherche pour tomber sur le match.</p>
     <p class="note">C'est la cote « juste » calculée par le modèle (1 ÷ probabilité). Si ton bookmaker propose plus haut pour le même pari, le modèle le juge intéressant. Plus bas, il vaut mieux passer.</p></div>
   <div class="box"><h3>Pourquoi cet indice <span>ce qui pèse</span></h3><div class="why">
     ${mod.why.map(([t, w]) => `<div class="why-row"><span>${esc(t)}</span><span class="w ${w<0?'neg':''}">${w>0?'+':''}${w}</span><div class="track"><div class="${w<0?'neg':''}" style="width:${Math.abs(w)/maxW*100}%"></div></div></div>`).join('')}
