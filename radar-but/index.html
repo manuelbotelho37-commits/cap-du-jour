@@ -199,6 +199,10 @@ nav.tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1
 .verdict{border-radius:12px;padding:10px 12px;font-weight:600;font-size:.9rem;margin-top:10px}
 .verdict.ok{background:rgba(62,211,160,.14);border:1px solid var(--gain);color:var(--gain)}
 .verdict.ko{background:rgba(240,113,106,.14);border:1px solid var(--loss);color:var(--loss)}
+.x{flex:none;margin-left:auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--dim);font-size:1rem;line-height:1;display:grid;place-items:center;cursor:pointer}
+.hero .x{position:absolute;top:10px;right:10px;margin:0}
+.card,.hero{cursor:pointer}
+.chip small{opacity:.7;margin-left:4px}
 .small-btn{border:1.5px solid var(--line);background:var(--panel2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:.85rem;color:var(--ink)}
 </style>
 
@@ -221,7 +225,20 @@ const LEAGUES = [
   {id:'den.1', n:'Superliga',      c:'Danemark'},
   {id:'gre.1', n:'Super League',   c:'Grèce'},
 ];
-const LEAGUE = id => LEAGUES.find(l => l.id === id) || {n:id, c:''};
+/* tous les autres championnats et coupes suivis par ESPN (codes qui n'existent pas = ignorés) */
+const WORLD = ('eng.2 eng.3 eng.4 eng.5 eng.fa eng.league_cup eng.trophy sco.1 sco.2 sco.3 sco.4 sco.tennents sco.cis irl.1 wal.1 nir.1 '
+ + 'fra.1 fra.2 fra.3 fra.coupe_de_france ger.2 ger.3 ger.dfb_pokal esp.2 esp.copa_del_rey ita.2 ita.3 ita.coppa_italia ned.2 ned.cup '
+ + 'por.1 por.2 por.taca.portugal bel.1 bel.2 tur.1 tur.2 swe.1 swe.2 aut.1 sui.1 sui.2 rus.1 ukr.1 pol.1 cze.1 cro.1 srb.1 rou.1 bul.1 hun.1 svk.1 svn.1 cyp.1 isr.1 fin.1 isl.1 '
+ + 'nor.2 den.2 gre.2 uefa.champions uefa.europa uefa.europa.conf uefa.nations uefa.euroq fifa.worldq.uefa fifa.friendly club.friendly '
+ + 'usa.1 usa.usl.1 usa.nwsl usa.open mex.1 mex.2 can.1 concacaf.champions concacaf.nations '
+ + 'bra.1 bra.2 bra.copa_do_brazil arg.1 arg.2 arg.copa col.1 chi.1 ecu.1 per.1 uru.1 par.1 ven.1 bol.1 conmebol.libertadores conmebol.sudamericana fifa.worldq.conmebol '
+ + 'jpn.1 jpn.2 kor.1 chn.1 aus.1 ksa.1 uae.1 qat.1 ind.1 tha.1 idn.1 mys.1 afc.champions fifa.worldq.afc '
+ + 'rsa.1 egy.1 mar.1 tun.1 alg.1 nga.1 gha.1 caf.champions fifa.worldq.caf eng.w.1 uefa.wchampions fifa.cwc').split(' ');
+const ALL_CODES = LEAGUES.map(l => l.id).concat(WORLD);
+const COUNTRY = {eng:'Angleterre', sco:'Écosse', irl:'Irlande', wal:'Pays de Galles', nir:'Irlande du Nord', fra:'France', ger:'Allemagne', esp:'Espagne', ita:'Italie', ned:'Pays-Bas', por:'Portugal', bel:'Belgique', tur:'Turquie', swe:'Suède', aut:'Autriche', sui:'Suisse', rus:'Russie', ukr:'Ukraine', pol:'Pologne', cze:'Tchéquie', cro:'Croatie', srb:'Serbie', rou:'Roumanie', bul:'Bulgarie', hun:'Hongrie', svk:'Slovaquie', svn:'Slovénie', cyp:'Chypre', isr:'Israël', fin:'Finlande', isl:'Islande', nor:'Norvège', den:'Danemark', gre:'Grèce', uefa:'Europe', fifa:'Monde', club:'Monde', usa:'États-Unis', mex:'Mexique', can:'Canada', concacaf:'Amérique du Nord', bra:'Brésil', arg:'Argentine', col:'Colombie', chi:'Chili', ecu:'Équateur', per:'Pérou', uru:'Uruguay', par:'Paraguay', ven:'Venezuela', bol:'Bolivie', conmebol:'Amérique du Sud', jpn:'Japon', kor:'Corée du Sud', chn:'Chine', aus:'Australie', ksa:'Arabie saoudite', uae:'Émirats', qat:'Qatar', ind:'Inde', tha:'Thaïlande', idn:'Indonésie', mys:'Malaisie', afc:'Asie', rsa:'Afrique du Sud', egy:'Égypte', mar:'Maroc', tun:'Tunisie', alg:'Algérie', nga:'Nigeria', gha:'Ghana', caf:'Afrique'};
+const LNAMES = {};   /* nom renvoyé par ESPN pour les championnats hors favoris */
+const LEAGUE = id => LEAGUES.find(l => l.id === id) || {id, n:LNAMES[id] || id, c:COUNTRY[String(id).split('.')[0]] || ''};
+const isFav = id => LEAGUES.some(l => l.id === id);
 const LNAME = Object.fromEntries(LEAGUES.map(l => [l.id, l.n]));
 const STORE = 'radarbut_v1';
 const $ = s => document.querySelector(s);
@@ -232,10 +249,20 @@ const fr = n => String(n).replace('.', ',');
 function load(){ try{ return JSON.parse(localStorage.getItem(STORE) || 'null'); }catch(e){ return null; } }
 let S = Object.assign({every:1, threshold:75, notify:false, alerts:[], demo:false}, load() || {});
 if(!S.v2){ S.every = 1; S.v2 = true; }
+S.hidden = S.hidden || {};   /* matchs masqués avec la croix : {id: date} */
+for(const k in S.hidden) if(Date.now() - S.hidden[k] > 12 * 3600e3) delete S.hidden[k];
+const shown = () => LIVE.filter(m => !S.hidden[m.id]);
+function hideM(ev, id){
+  ev.stopPropagation();
+  S.hidden[id] = Date.now(); save();
+  if(ui.match === id) ui.match = null;
+  toast('Match retiré de la liste'); render();
+}
+function unhideAll(){ S.hidden = {}; save(); toast('Tous les matchs sont de retour'); render(); }
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
 const today = () => new Date().toISOString().slice(0,10);
 
-let ui = {tab:'live', match:null, filter:'Tous', loading:false, error:'', lastAt:null, upcoming:[]};
+let ui = {tab:'live', match:null, filter:'', fullAt:0, active:[], loading:false, error:'', lastAt:null, upcoming:[]};
 let STAND = {};        /* classement par championnat : {ligue: {at, t:{idÉquipe:{r,pts,gp,gf,ga}}}} */
 try{ STAND = JSON.parse(localStorage.getItem('radarbut_stand') || '{}') || {}; }catch(e){}
 let ODDS = {};         /* historique de la cote juste par match : {id: [{min, o}]} */
@@ -344,22 +371,32 @@ async function refresh(){
     const prev = Object.fromEntries(LIVE.map(m => [m.id, m]));
     if(S.demo){ LIVE = demoMatches(); ui.upcoming = []; }
     else {
-      const res = await Promise.allSettled(LEAGUES.map(l => getJSON(API + l.id + '/scoreboard').then(j => ({l, j}))));
+      const full = !ui.fullAt || Date.now() - ui.fullAt > 5 * 60e3 || !ui.active.length;
+      const codes = full ? ALL_CODES : [...new Set(LEAGUES.map(l => l.id).concat(ui.active))];
+      const res = await Promise.allSettled(codes.map(id => getJSON(API + id + '/scoreboard').then(j => {
+        const L = j.leagues && j.leagues[0];
+        if(L && L.name && !isFav(id)) LNAMES[id] = L.name;
+        return {l:LEAGUE(id), j};
+      })));
+      const active = new Set();
       const live = [], next = [];
       let fails = 0;
       res.forEach(r => {
         if(r.status !== 'fulfilled'){ fails++; return; }
         (r.value.j.events || []).forEach(ev => {
           const state = ev.status && ev.status.type && ev.status.type.state;
-          if(state === 'in') live.push(toMatch(ev, r.value.l));
+          if(state === 'in'){ live.push(toMatch(ev, r.value.l)); active.add(r.value.l.id); }
+          else if(state === 'pre' && new Date(ev.date) - Date.now() < 20 * 60e3) active.add(r.value.l.id);
           else if(state === 'pre'){ const cs = ev.competitions[0].competitors, H = cs.find(x => x.homeAway === 'home'), A = cs.find(x => x.homeAway === 'away');
             next.push({lg:r.value.l.id, lgName:r.value.l.n, h:H.team.shortDisplayName || H.team.displayName, a:A.team.shortDisplayName || A.team.displayName, hid:H.team.id, aid:A.team.id, date:ev.date}); }
         });
       });
-      if(fails === LEAGUES.length) throw new Error('Impossible de lire le flux des matchs. Vérifie ta connexion.');
+      if(full) ui.fullAt = Date.now();
+      ui.active = [...active];
+      if(fails === codes.length) throw new Error('Impossible de lire le flux des matchs. Vérifie ta connexion.');
       LIVE = live;
-      ui.upcoming = next.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12);
-      await loadStandings([...new Set(live.map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))]);
+      if(full || !ui.upcoming.length) ui.upcoming = next.filter(u => isFav(u.lg)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12);
+      await loadStandings([...new Set(live.filter(m => !S.hidden[m.id]).map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))].slice(0, 25));
     }
     LIVE.forEach(m => m.mod = model(m));
     LIVE.forEach(m => {
@@ -388,7 +425,7 @@ function trackAlerts(prev){
   });
   /* nouvelles alertes */
   LIVE.forEach(m => {
-    if(m.mod.idx < S.threshold || m.status === 'HT' || m.min > 85) return;
+    if(S.hidden[m.id] || m.mod.idx < S.threshold || m.status === 'HT' || m.min > 85) return;
     if(S.alerts.some(a => a.id === m.id && !a.res)) return;
     S.alerts.unshift({id:m.id, at:Date.now(), match:m.h + ' – ' + m.a, lg:m.lgName + ' (' + LEAGUE(m.lg).c + ')', min:m.min, score:m.gh + '-' + m.ga, goals:m.gh + m.ga, idx:m.mod.idx, p:m.mod.pEnd, res:null, demo:S.demo});
     notify(m);
@@ -462,37 +499,41 @@ function statusLine(){
 
 /* ---------- écrans ---------- */
 function liveView(){
-  let h = header('Tes 8 championnats en direct') + statusLine();
-  const chips = ['Tous'].concat(LEAGUES.map(l => l.n));
-  h += `<div class="chips">${chips.map(l => `<button class="chip ${ui.filter===l?'on':''}" onclick="ui.filter='${l}';render()">${l}</button>`).join('')}</div>`;
+  const vis = shown(), nHid = LIVE.length - vis.length;
+  let h = header('Tous les matchs en direct') + statusLine();
+  const cnt = {}; vis.forEach(m => cnt[m.lg] = (cnt[m.lg] || 0) + 1);
+  const lgs = Object.keys(cnt).sort((a, b) => (isFav(b) - isFav(a)) || cnt[b] - cnt[a]);
+  if(ui.filter && !cnt[ui.filter]) ui.filter = '';
+  h += `<div class="chips"><button class="chip ${!ui.filter?'on':''}" data-lg="" onclick="ui.filter=this.dataset.lg;render()">Tous<small>${vis.length}</small></button>${lgs.map(l => `<button class="chip ${ui.filter===l?'on':''}" data-lg="${esc(l)}" onclick="ui.filter=this.dataset.lg;render()">${esc(LEAGUE(l).n)}<small>${cnt[l]}</small></button>`).join('')}</div>`;
   if(ui.error) h += `<div class="err">${esc(ui.error)}</div>`;
-  const list = LIVE.filter(m => ui.filter === 'Tous' || m.lgName === ui.filter).sort((a, b) => b.mod.idx - a.mod.idx);
+  const list = vis.filter(m => !ui.filter || m.lg === ui.filter).sort((a, b) => b.mod.idx - a.mod.idx);
+  const back = nHid ? `<button class="btn ghost" onclick="unhideAll()">Réafficher les ${nHid} match${nHid > 1 ? 's' : ''} retiré${nHid > 1 ? 's' : ''}</button>` : '';
   if(!list.length){
     const up = ui.upcoming.map(u => `<div class="hist"><span class="when">${new Date(u.date).toLocaleDateString('fr-FR', {weekday:'short'})}<br>${new Date(u.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span><div class="what">${esc(u.h)}${rk(u.lg, u.hid)} – ${esc(u.a)}${rk(u.lg, u.aid)}<small>${esc(u.lgName)} · ${esc(LEAGUE(u.lg).c)}</small></div></div>`).join('');
-    return h + `<div class="empty"><b>${ui.loading ? 'Chargement des matchs…' : 'Aucun match en direct'}</b>${ui.loading ? '' : 'Pas de match en cours dans tes championnats. L’appli vérifie à nouveau toute seule.'}
+    return h + `<div class="empty"><b>${ui.loading ? 'Chargement des matchs…' : 'Aucun match en direct'}</b>${ui.loading ? '' : (nHid ? 'Tu as retiré tous les matchs en cours.' : 'Aucun match en cours dans le monde pour le moment. L’appli vérifie à nouveau toute seule.')}${back}
       <button class="btn ghost" onclick="refresh()">Actualiser</button>${S.demo ? '' : `<button class="btn ghost" onclick="S.demo=true;save();refresh()">Voir le mode démo</button>`}</div>
       ${up ? `<div class="box"><h3>Prochains matchs <span>à l’heure de ton téléphone</span></h3>${up}</div>` : ''}`;
   }
   const top = list[0];
-  h += `<button class="hero" onclick="openM('${top.id}')"><div class="eyebrow">N°1 en ce moment</div>
+  h += `<div class="hero" role="button" tabindex="0" onclick="openM('${top.id}')"><span class="x" role="button" aria-label="Retirer ce match" onclick="hideM(event,'${top.id}')">✕</span><div class="eyebrow">N°1 en ce moment</div>
     <div class="hero-row">${ring(top.mod.idx, 96, 9)}<div class="hero-teams"><div class="t">${esc(top.h)} – ${esc(top.a)}</div>
     <div class="m"><span class="min">${top.status==='HT'?'MT':top.min+'′'}</span> · ${top.gh}-${top.ga} · ${esc(top.lgName)} (${esc(LEAGUE(top.lg).c)})</div>
     <div class="m">${standOf(top.lg, top.hid) ? esc(top.h) + ' ' + ord(standOf(top.lg, top.hid).r) + ' · ' + esc(top.a) + ' ' + ord((standOf(top.lg, top.aid) || {}).r || 0) + ' au classement' : ''}</div></div></div>
     <div class="hero-foot"><div class="kpi"><b class="num">${top.mod.p10} %</b><span>but dans 10 min</span></div>
     <div class="kpi"><b class="num">${top.mod.p20} %</b><span>but dans 20 min</span></div>
-    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(bookOdds(top.mod.pEnd))}</b><span>cote estimée « plus de ${top.gh + top.ga},5 buts »</span></div></div></button>`;
+    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(bookOdds(top.mod.pEnd))}</b><span>cote estimée « plus de ${top.gh + top.ga},5 buts »</span></div></div></div>`;
   h += `<div class="sec"><h2>Classement live</h2><button class="small-btn" onclick="refresh()">${ui.loading?'…':'Actualiser'}</button></div><div class="list">`;
   list.forEach((m, i) => {
     const st = STATS[m.id] && STATS[m.id].s;
     const tags = st ? `<span class="tag">${st.home.sot + st.away.sot} tirs cadrés</span><span class="tag">${st.home.shots + st.away.shots} tirs</span><span class="tag">${st.home.corners + st.away.corners} corners</span>` : `<span class="tag">stats pas encore publiées</span>`;
-    h += `<button class="card" onclick="openM('${m.id}')"><span class="rk">${i+1}</span><div class="mid">
-      <div class="lg"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span>${esc(m.lgName)} · ${esc(LEAGUE(m.lg).c)}</div>
+    h += `<div class="card" role="button" tabindex="0" onclick="openM('${m.id}')"><span class="rk">${i+1}</span><div class="mid">
+      <div class="lg"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.lgName)} · ${esc(LEAGUE(m.lg).c)}</span><span class="x" role="button" aria-label="Retirer ce match" onclick="hideM(event,'${m.id}')">✕</span></div>
       <div class="row-team"><span>${esc(m.h)}${rk(m.lg, m.hid)}</span><span class="sc">${m.gh}</span></div>
       <div class="row-team"><span>${esc(m.a)}${rk(m.lg, m.aid)}</span><span class="sc">${m.ga}</span></div>
       <div class="tags"><span class="tag val">Plus de ${m.gh + m.ga},5 buts : ${fo(bookOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</span>${tags}${m.mod.idx >= S.threshold ? '<span class="tag hot">Chaud</span>' : ''}</div></div>
-      ${ring(m.mod.idx, 58, 6)}</button>`;
+      ${ring(m.mod.idx, 58, 6)}</div>`;
   });
-  return h + `</div>`;
+  return h + `</div>` + (back ? `<div style="margin-top:14px">${back}</div>` : '');
 }
 function standBox(m){
   const H = standOf(m.lg, m.hid), A = standOf(m.lg, m.aid);
@@ -590,7 +631,8 @@ function clearHist(b){
 function setView(){
   let h = header('Réglages');
   h += `<div class="box" style="margin-top:0"><h3>Source des matchs <span>gratuite, sans compte</span></h3>
-    <p class="note" style="margin-top:0">Les scores et les stats viennent du flux public d'ESPN pour tes 8 championnats : ${LEAGUES.map(l => l.n + ' (' + l.c + ')').join(', ')}.</p></div>
+    <p class="note" style="margin-top:0">Les scores et les stats viennent du flux public d'ESPN : tous les matchs en direct qu'il suit dans le monde (environ ${ALL_CODES.length} championnats et coupes). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
+    ${Object.keys(S.hidden).length ? `<button class="btn ghost" onclick="unhideAll()">Réafficher les matchs retirés (${Object.keys(S.hidden).length})</button>` : ''}</div>
   <div class="box"><h3>Actualisation</h3>
     <div class="field"><label for="every">Actualiser toutes les</label><select class="in" id="every" onchange="S.every=+this.value;save();schedule();render()">${[1,2,5].map(v => `<option ${S.every===v?'selected':''} value="${v}">${v} min</option>`).join('')}</select></div></div>
   <div class="box"><h3>Notifications</h3>
@@ -611,7 +653,7 @@ function demoMatches(){
   return D.map(([lg, h, a, gh, ga, min, sot, sh, co], i) => {
     const id = 'demo' + i;
     STATS[id] = {at:Date.now(), s:{home:{sot:sot[0], shots:sh[0], corners:co[0], poss:52, xg:0, fouls:8}, away:{sot:sot[1], shots:sh[1], corners:co[1], poss:48, xg:0, fouls:9}}};
-    return {id, lg, lgName:LEAGUES.find(l => l.id === lg).n, h, a, gh, ga, min, status:'LIVE', events:[]};
+    return {id, lg, lgName:LEAGUE(lg).n, h, a, gh, ga, min, status:'LIVE', events:[]};
   });
 }
 
