@@ -291,13 +291,27 @@ let LIVE = [];          /* matchs en cours, enrichis */
 let STATS = {};         /* stats par match : {fixtureId: {at, home:{...}, away:{...}}} */
 
 /* ---------- lecture du flux ---------- */
-async function getJSON(url){
-  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 12000);
+/* Si le navigateur refuse une source en direct (blocage ou sécurité CORS), on passe par un relais public gratuit. */
+const RELAYS = [u => u, u => 'https://corsproxy.io/?url=' + encodeURIComponent(u), u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u), u => 'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(u)];
+const RELAY_OK = {};   /* par site : numéro du relais qui a marché en dernier */
+async function fetchOnce(url){
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 10000);
   try{
-    let r; try{ r = await fetch(url, {cache:'no-store', signal:ac.signal}); }catch(e){ const x = new Error('réseau'); x.status = /livescore/.test(url) ? 'LS-réseau' : 'réseau'; throw x; }
-    if(!r.ok){ const e = new Error('Le flux des matchs a répondu ' + r.status + '. Nouvel essai à la prochaine actualisation.'); e.status = r.status; throw e; }
+    let r; try{ r = await fetch(url, {cache:'no-store', signal:ac.signal}); }catch(e){ const x = new Error('réseau'); x.status = 'réseau'; throw x; }
+    if(!r.ok){ const e = new Error('code ' + r.status); e.status = r.status; throw e; }
     return await r.json();
   } finally { clearTimeout(t); }
+}
+async function getJSON(url){
+  const host = new URL(url).host, start = RELAY_OK[host] || 0;
+  let err;
+  for(let k = 0; k < RELAYS.length; k++){
+    const i = (start + k) % RELAYS.length;
+    try{ const j = await fetchOnce(RELAYS[i](url)); RELAY_OK[host] = i; return j; }
+    catch(e){ err = e; if(i === 0 && (e.status === 400 || e.status === 404)) throw e; }
+  }
+  if(/livescore/.test(url)) err.status = 'LS-' + err.status;
+  throw err;
 }
 /* lance les requêtes par petits paquets (6 à la fois) pour ne pas se faire bloquer par ESPN */
 async function pool(items, n, fn){
@@ -677,7 +691,7 @@ function clearHist(b){
 function setView(){
   let h = header('Réglages');
   h += `<div class="box" style="margin-top:0"><h3>Source des matchs <span>gratuite, sans compte</span></h3>
-    <p class="note" style="margin-top:0">Les matchs viennent de deux flux publics gratuits : LiveScore (presque tous les matchs du monde, même les petites divisions) et ESPN (stats détaillées et classements). LiveScore : ${ui.ls || 'pas encore testé'}. ESPN : tous les matchs en direct qu'il suit dans le monde (tes 8 championnats). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
+    <p class="note" style="margin-top:0">Les matchs viennent de deux flux publics gratuits : LiveScore (presque tous les matchs du monde, même les petites divisions) et ESPN (stats détaillées et classements). LiveScore : ${ui.ls || 'pas encore testé'}${RELAY_OK['prod-public-api.livescore.com'] ? ' (via relais ' + RELAY_OK['prod-public-api.livescore.com'] + ')' : ''}. ESPN : tous les matchs en direct qu'il suit dans le monde (tes 8 championnats). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
     ${Object.keys(S.hidden).length ? `<button class="btn ghost" onclick="unhideAll()">Réafficher les matchs retirés (${Object.keys(S.hidden).length})</button>` : ''}</div>
   <div class="box"><h3>Actualisation</h3>
     <div class="field"><label for="every">Actualiser toutes les</label><select class="in" id="every" onchange="S.every=+this.value;save();schedule();render()">${[1,2,5].map(v => `<option ${S.every===v?'selected':''} value="${v}">${v} min</option>`).join('')}</select></div></div>
