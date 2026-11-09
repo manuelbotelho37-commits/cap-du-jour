@@ -331,7 +331,7 @@ function model(m){
   const p10 = P(10), p20 = P(20), pEnd = P(mins.length);
   const pHt = first ? 1 - Math.exp(-(47 - min) * W1 * scale) : null;
   const idx = Math.max(1, Math.min(99, Math.round(p20 * 100 / 0.5 * 0.85)));
-  return {f, lam, p10:Math.round(p10*100), p20:Math.round(p20*100), pEnd:Math.round(pEnd*100), pHt:pHt == null ? null : Math.round(pHt*100), idx, why, rem:mins.length};
+  return {f, lam, p10:Math.round(p10*100), p20:Math.round(p20*100), pEnd:Math.round(pEnd*100), pHt:pHt == null ? null : Math.round(pHt*100), idx, why, rem:mins.length, hot:p20 * 1000 + p10 * 10 + pEnd};
 }
 
 /* ---------- rafraîchissement ---------- */
@@ -507,7 +507,7 @@ function liveView(){
   if(ui.filter && !cnt[ui.filter]) ui.filter = '';
   h += `<div class="chips"><button class="chip ${!ui.filter?'on':''}" data-lg="" onclick="ui.filter=this.dataset.lg;render()">Tous<small>${vis.length}</small></button>${lgs.map(l => `<button class="chip ${ui.filter===l?'on':''}" data-lg="${esc(l)}" onclick="ui.filter=this.dataset.lg;render()">${esc(LEAGUE(l).n)}<small>${cnt[l]}</small></button>`).join('')}</div>`;
   if(ui.error) h += `<div class="err">${esc(ui.error)}</div>`;
-  const list = vis.filter(m => !ui.filter || m.lg === ui.filter).sort((a, b) => b.mod.idx - a.mod.idx);
+  const list = vis.filter(m => !ui.filter || m.lg === ui.filter).sort((a, b) => b.mod.hot - a.mod.hot);
   const back = nHid ? `<button class="btn ghost" onclick="unhideAll()">Réafficher les ${nHid} match${nHid > 1 ? 's' : ''} retiré${nHid > 1 ? 's' : ''}</button>` : '';
   if(!list.length){
     const up = ui.upcoming.map(u => `<div class="hist"><span class="when">${new Date(u.date).toLocaleDateString('fr-FR', {weekday:'short'})}<br>${new Date(u.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span><div class="what">${esc(u.h)}${rk(u.lg, u.hid)} – ${esc(u.a)}${rk(u.lg, u.aid)}<small>${esc(u.lgName)} · ${esc(LEAGUE(u.lg).c)}</small></div></div>`).join('');
@@ -523,7 +523,7 @@ function liveView(){
     <div class="hero-foot"><div class="kpi"><b class="num">${top.mod.p10} %</b><span>but dans 10 min</span></div>
     <div class="kpi"><b class="num">${top.mod.p20} %</b><span>but dans 20 min</span></div>
     <div class="kpi"><b class="num" style="color:var(--gain)">${fo(bookOdds(top.mod.pEnd))}</b><span>cote estimée « plus de ${top.gh + top.ga},5 buts »</span></div></div></div>`;
-  h += `<div class="sec"><h2>Classement live</h2><button class="small-btn" onclick="refresh()">${ui.loading?'…':'Actualiser'}</button></div><div class="list">`;
+  h += `<div class="sec"><h2>Du plus chaud au moins chaud</h2><button class="small-btn" onclick="refresh()">${ui.loading?'…':'Actualiser'}</button></div><div class="list">`;
   list.forEach((m, i) => {
     const st = STATS[m.id] && STATS[m.id].s;
     const tags = st ? `<span class="tag">${st.home.sot + st.away.sot} tirs cadrés</span><span class="tag">${st.home.shots + st.away.shots} tirs</span><span class="tag">${st.home.corners + st.away.corners} corners</span>` : `<span class="tag">stats pas encore publiées</span>`;
