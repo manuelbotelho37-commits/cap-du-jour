@@ -262,43 +262,49 @@ function readStats(comp){
   const s = {home:pick(h), away:pick(a)};
   return (s.home.shots + s.away.shots + s.home.poss) > 0 ? s : null;
 }
+/* Buts attendus sur un match entier selon le championnat (moyennes récentes), utilisées si le classement manque */
+const LG_GOALS = {'eng.1':2.85, 'ger.1':3.1, 'esp.1':2.55, 'ita.1':2.6, 'ned.1':3.2, 'nor.1':3.0, 'den.1':2.85, 'gre.1':2.4};
+/* poids d'une minute de jeu : les buts sont plus fréquents au fil du match (somme sur 96 min ≈ 2,86) */
+const W1 = 0.026, W2 = 0.031, W3 = 0.037, WSUM = 47 * W1 + 30 * W2 + 19 * W3;
 function model(m){
-  /* temps restant réel : environ 2 min ajoutées en 1re mi-temps et 6 en 2e (moyenne actuelle) */
-  const min = Math.max(1, m.min), rem = min >= 90 ? Math.max(2, 97 - min) : 96 - min;
-  const st = STATS[m.id] && STATS[m.id].s;
+  const min = Math.max(1, m.min), first = m.status !== 'HT' && min <= 45;
   const why = [];
-  let f = 1;
-  if(st){
-    const T = k => st.home[k] + st.away[k];
-    const xg = T('xg');
-    const per90 = (T('sot')*0.30 + Math.max(0, T('shots') - T('sot'))*0.08 + T('corners')*0.05 + xg*0.5) / min * 90;
-    f = Math.min(2.2, Math.max(0.45, per90 / 4.8));
-    why.push(['Intensité offensive : ' + T('sot') + ' tirs cadrés, ' + T('shots') + ' tirs, ' + T('corners') + ' corners', Math.round((f - 1) * 40)]);
-    if(xg > 0){ const gap = xg - (m.gh + m.ga); if(Math.abs(gap) > 0.3){ f *= 1 + Math.max(-0.15, Math.min(0.2, gap * 0.12)); why.push(['xG ' + fr(xg.toFixed(2)) + ' pour ' + (m.gh + m.ga) + ' but(s)', Math.round(gap * 10)]); } }
-  } else {
-    why.push(['Stats détaillées pas encore chargées (rythme moyen utilisé)', 0]);
-  }
+  /* 1. point de départ : combien de buts ce match devait produire, comme le font les bookmakers avant le coup d'envoi */
+  let lam = LG_GOALS[m.lg] || 2.8;
   const H = standOf(m.lg, m.hid), A = standOf(m.lg, m.aid);
   if(H && A && H.gp > 2 && A.gp > 2){
     const gpm = ((H.gf + H.ga) / H.gp + (A.gf + A.ga) / A.gp) / 2;
-    const k = Math.max(0.8, Math.min(1.25, gpm / 2.7));
-    f *= k;
-    why.push(['Avant-match : leurs matchs font ' + fr(gpm.toFixed(1)) + ' buts en moyenne (' + ord(H.r) + ' contre ' + ord(A.r) + ')', Math.round((k - 1) * 40)]);
+    lam = Math.max(2.0, Math.min(3.8, 0.5 * lam + 0.5 * gpm));
+    why.push(['Avant-match : leurs matchs font ' + fr(gpm.toFixed(1)) + ' buts en moyenne (' + ord(H.r) + ' contre ' + ord(A.r) + ')', Math.round((gpm / (LG_GOALS[m.lg] || 2.8) - 1) * 30)]);
   }
+  /* 2. ce que montre le match : effet volontairement modéré, les bookmakers bougent peu sur les tirs */
+  let f = 1;
+  const st = STATS[m.id] && STATS[m.id].s;
+  if(st && min >= 10){
+    const T = k => st.home[k] + st.away[k];
+    const per90 = (T('sot') * 0.30 + Math.max(0, T('shots') - T('sot')) * 0.08 + T('corners') * 0.05) / min * 90;
+    f = Math.min(1.3, Math.max(0.8, 1 + 0.3 * (per90 / 4.8 - 1)));
+    why.push(['Intensité offensive : ' + T('sot') + ' tirs cadrés, ' + T('shots') + ' tirs, ' + T('corners') + ' corners', Math.round((f - 1) * 60)]);
+  } else if(!st){ why.push(['Stats du match pas encore publiées', 0]); }
+  /* 3. le score */
   const diff = Math.abs(m.gh - m.ga);
-  if(diff === 0){ f *= 1.05; why.push(['Score nul : les deux équipes peuvent pousser', 4]); }
-  else if(diff === 1){ f *= 1.08; why.push(['Un but d’écart : l’équipe menée attaque', 6]); }
-  else { f *= 0.9; why.push(['Écart de ' + diff + ' buts : le match peut se calmer', -6]); }
-  if(min >= 75){ why.push(['Fin de match : le rythme des buts est le plus élevé', 6]); }
-  if(m.status === 'HT'){ why.push(['Mi-temps en cours', 0]); }
-  /* rythme moyen des buts par minute selon la période (les buts sont plus fréquents en fin de match) */
-  const base = min < 45 ? 0.026 : min < 75 ? 0.031 : 0.037;
-  const rate = base * f;
-  const P = t => 1 - Math.exp(-rate * Math.max(0, Math.min(t, rem)));
-  const p10 = P(10), p20 = P(20), pEnd = P(rem);
-  const pHt = min < 45 ? P(45 + 2 - min) : null;
-  const idx = Math.max(1, Math.min(99, Math.round(p20 * 100 / 0.62 * 0.9 + (rem < 20 ? 0 : 0))));
-  return {f, p10:Math.round(p10*100), p20:Math.round(p20*100), pEnd:Math.round(pEnd*100), pHt:pHt == null ? null : Math.round(pHt*100), idx, why, rem};
+  if(diff === 1 && min >= 60){ f *= 1.06; why.push(['Un but d’écart : l’équipe menée attaque', 5]); }
+  else if(diff >= 2){ f *= 0.92; why.push(['Écart de ' + diff + ' buts : le match peut se calmer', -5]); }
+  else if(diff === 0 && min >= 75){ f *= 0.96; why.push(['Nul en fin de match : certaines équipes se contentent du point', -3]); }
+  if(min >= 75) why.push(['Fin de match : le rythme des buts est le plus élevé', 5]);
+  if(m.status === 'HT') why.push(['Mi-temps en cours', 0]);
+  /* 4. buts attendus d'ici la fin, minute par minute (2 min ajoutées en 1re période, 6 en 2e) */
+  const scale = lam * 0.92 / WSUM * f; /* 0,92 : les matchs sans but sont un peu plus fréquents que le calcul simple ne le dit */
+  const mins = [];
+  if(first){ for(let t = min; t < 47; t++) mins.push(W1); for(let t = 45; t < 96; t++) mins.push(t < 75 ? W2 : W3); }
+  else if(m.status === 'HT'){ for(let t = 45; t < 96; t++) mins.push(t < 75 ? W2 : W3); }
+  else { const end = min >= 90 ? Math.max(min + 2, 97) : 96; for(let t = min; t < end; t++) mins.push(t < 75 ? W2 : W3); }
+  const xgIn = n => mins.slice(0, n).reduce((s, w) => s + w, 0) * scale;
+  const P = n => 1 - Math.exp(-xgIn(n));
+  const p10 = P(10), p20 = P(20), pEnd = P(mins.length);
+  const pHt = first ? 1 - Math.exp(-(47 - min) * W1 * scale) : null;
+  const idx = Math.max(1, Math.min(99, Math.round(p20 * 100 / 0.5 * 0.85)));
+  return {f, lam, p10:Math.round(p10*100), p20:Math.round(p20*100), pEnd:Math.round(pEnd*100), pHt:pHt == null ? null : Math.round(pHt*100), idx, why, rem:mins.length};
 }
 
 /* ---------- rafraîchissement ---------- */
@@ -357,7 +363,7 @@ async function refresh(){
     }
     LIVE.forEach(m => m.mod = model(m));
     LIVE.forEach(m => {
-      const o = fairOdds(m.mod.pEnd), h = ODDS[m.id] = ODDS[m.id] || [];
+      const o = bookOdds(m.mod.pEnd), h = ODDS[m.id] = ODDS[m.id] || [];
       if(o && (!h.length || h[h.length - 1].min !== m.min || h[h.length - 1].o !== o)) h.push({min:m.min, o});
       if(h.length > 120) h.shift();
     });
@@ -399,6 +405,7 @@ function notify(m){
 /* ---------- dessin ---------- */
 /* cote juste = 1 / probabilité : la cote à partir de laquelle le pari devient intéressant selon le modèle */
 function fairOdds(p){ return p > 0 && p < 100 ? Math.round(100 / p * 100) / 100 : null; }
+function bookOdds(p){ const o = fairOdds(p); return o ? Math.max(1.01, Math.round(o * 0.94 * 100) / 100) : null; }
 function fo(o){ return o ? o.toFixed(2).replace('.', ',') : '–'; }
 const SEEN = {};
 function verdictHTML(m){
@@ -473,7 +480,7 @@ function liveView(){
     <div class="m">${standOf(top.lg, top.hid) ? esc(top.h) + ' ' + ord(standOf(top.lg, top.hid).r) + ' · ' + esc(top.a) + ' ' + ord((standOf(top.lg, top.aid) || {}).r || 0) + ' au classement' : ''}</div></div></div>
     <div class="hero-foot"><div class="kpi"><b class="num">${top.mod.p10} %</b><span>but dans 10 min</span></div>
     <div class="kpi"><b class="num">${top.mod.p20} %</b><span>but dans 20 min</span></div>
-    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(fairOdds(top.mod.pEnd))}</b><span>cote juste « plus de ${top.gh + top.ga},5 buts »</span></div></div></button>`;
+    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(bookOdds(top.mod.pEnd))}</b><span>cote estimée « plus de ${top.gh + top.ga},5 buts »</span></div></div></button>`;
   h += `<div class="sec"><h2>Classement live</h2><button class="small-btn" onclick="refresh()">${ui.loading?'…':'Actualiser'}</button></div><div class="list">`;
   list.forEach((m, i) => {
     const st = STATS[m.id] && STATS[m.id].s;
@@ -482,7 +489,7 @@ function liveView(){
       <div class="lg"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span>${esc(m.lgName)} · ${esc(LEAGUE(m.lg).c)}</div>
       <div class="row-team"><span>${esc(m.h)}${rk(m.lg, m.hid)}</span><span class="sc">${m.gh}</span></div>
       <div class="row-team"><span>${esc(m.a)}${rk(m.lg, m.aid)}</span><span class="sc">${m.ga}</span></div>
-      <div class="tags"><span class="tag val">Plus de ${m.gh + m.ga},5 buts : ${fo(fairOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</span>${tags}${m.mod.idx >= S.threshold ? '<span class="tag hot">Chaud</span>' : ''}</div></div>
+      <div class="tags"><span class="tag val">Plus de ${m.gh + m.ga},5 buts : ${fo(bookOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</span>${tags}${m.mod.idx >= S.threshold ? '<span class="tag hot">Chaud</span>' : ''}</div></div>
       ${ring(m.mod.idx, 58, 6)}</button>`;
   });
   return h + `</div>`;
@@ -511,11 +518,11 @@ function detailView(){
     <div class="prob"><b class="num">${mod.p10} %</b><span>dans les 10 min</span></div>
     <div class="prob"><b class="num">${mod.pHt != null ? mod.pHt + ' %' : mod.p20 + ' %'}</b><span>${mod.pHt != null ? 'avant la mi-temps' : 'dans les 20 min'}</span></div>
     <div class="prob"><b class="num" style="color:var(--gold)">${mod.pEnd} %</b><span>avant la fin</span></div></div></div>
-  <div class="box"><h3>Cote du prochain but <span>mise à jour chaque minute</span></h3>
+  <div class="box"><h3>Cote estimée du prochain but <span>mise à jour chaque minute</span></h3>
     <div class="value">
-      <div><b class="num" style="color:var(--gain)">${fo(fairOdds(mod.pEnd))} ${oddsTrend(m.id)}</b><span>but avant la fin</span></div>
-      <div><b class="num">${fo(fairOdds(mod.p20))}</b><span>but dans 20 min</span></div>
-      <div><b class="num">${fo(fairOdds(mod.p10))}</b><span>but dans 10 min</span></div>
+      <div><b class="num" style="color:var(--gain)">${fo(bookOdds(mod.pEnd))} ${oddsTrend(m.id)}</b><span>plus de ${m.gh + m.ga},5 buts</span></div>
+      <div><b class="num">${fo(bookOdds(mod.p20))}</b><span>but dans 20 min</span></div>
+      <div><b class="num">${fo(bookOdds(mod.p10))}</b><span>but dans 10 min</span></div>
     </div>
     ${oddsChart(m.id)}
     <div class="field"><label for="seen">Meilleure cote vue chez un bookmaker, pari « Plus de ${m.gh + m.ga},5 buts »</label>
@@ -527,7 +534,7 @@ function detailView(){
       <a href="https://www.unibet.fr/sport/live" target="_blank" rel="noopener" onclick="copyTeam('${esc(m.h).replace(/'/g, '')}')">Unibet ↗</a>
     </div>
     <p class="note">En touchant un bookmaker, le nom « ${esc(m.h)} » est copié : colle-le dans sa recherche pour tomber sur le match.</p>
-    <p class="note">C'est la cote « juste » calculée par le modèle (1 ÷ probabilité). Si ton bookmaker propose plus haut pour le même pari, le modèle le juge intéressant. Plus bas, il vaut mieux passer.</p></div>
+    <p class="note">Ces cotes imitent celles d'un bookmaker (marge comprise) pour que tu puisses comparer directement. Compare toujours avec le pari « Plus de ${m.gh + m.ga},5 buts ». Le verdict, lui, compare ta cote à la cote juste sans marge (${fo(fairOdds(mod.pEnd))}).</p></div>
   <div class="box"><h3>Pourquoi cet indice <span>ce qui pèse</span></h3><div class="why">
     ${mod.why.map(([t, w]) => `<div class="why-row"><span>${esc(t)}</span><span class="w ${w<0?'neg':''}">${w>0?'+':''}${w}</span><div class="track"><div class="${w<0?'neg':''}" style="width:${Math.abs(w)/maxW*100}%"></div></div></div>`).join('')}
   </div></div>`;
