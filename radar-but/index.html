@@ -194,6 +194,11 @@ nav.tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1
 .tbl th{color:var(--dim);font-weight:600;font-size:.72rem;text-align:right;padding:0 0 6px}
 .tbl th:first-child,.tbl td:first-child{text-align:left}
 .tbl td{padding:7px 0;text-align:right;border-top:1px solid rgba(35,66,90,.7);font-variant-numeric:tabular-nums}
+.books{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.books a{display:block;text-align:center;text-decoration:none;border:1.5px solid var(--line);background:var(--panel2);border-radius:12px;padding:10px 4px;font-weight:700;font-size:.85rem;color:var(--ink)}
+.verdict{border-radius:12px;padding:10px 12px;font-weight:600;font-size:.9rem;margin-top:10px}
+.verdict.ok{background:rgba(62,211,160,.14);border:1px solid var(--gain);color:var(--gain)}
+.verdict.ko{background:rgba(240,113,106,.14);border:1px solid var(--loss);color:var(--loss)}
 .small-btn{border:1.5px solid var(--line);background:var(--panel2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:.85rem;color:var(--ink)}
 </style>
 
@@ -392,6 +397,15 @@ function notify(m){
 /* cote juste = 1 / probabilité : la cote à partir de laquelle le pari devient intéressant selon le modèle */
 function fairOdds(p){ return p > 0 && p < 100 ? Math.round(100 / p * 100) / 100 : null; }
 function fo(o){ return o ? o.toFixed(2).replace('.', ',') : '–'; }
+const SEEN = {};
+function verdictHTML(m){
+  const v = parseFloat(String(SEEN[m.id] || '').replace(',', '.')), fair = fairOdds(m.mod.pEnd);
+  if(!v || !fair) return '';
+  const edge = Math.round((v / fair - 1) * 100);
+  return edge > 0 ? `<div class="verdict ok">Intéressant : ${fo(v)} est au-dessus de la cote juste (${fo(fair)}), avantage estimé +${edge} %.</div>`
+                  : `<div class="verdict ko">À éviter : ${fo(v)} est en dessous de la cote juste (${fo(fair)}).</div>`;
+}
+function verdict(id){ const m = LIVE.find(x => String(x.id) === String(id)); const el = $('#verdict'); if(m && el) el.innerHTML = verdictHTML(m); }
 function oddsTrend(id){
   const h = ODDS[id] || []; if(h.length < 2) return '';
   const d = h[h.length - 1].o - h[h.length - 2].o;
@@ -498,6 +512,14 @@ function detailView(){
       <div><b class="num">${fo(fairOdds(mod.p10))}</b><span>but dans 10 min</span></div>
     </div>
     ${oddsChart(m.id)}
+    <div class="field"><label for="seen">Meilleure cote vue chez un bookmaker, pari « Plus de ${m.gh + m.ga},5 buts »</label>
+      <input class="in" id="seen" inputmode="decimal" placeholder="ex. 1,60" value="${esc((SEEN[m.id] || ''))}" oninput="SEEN['${m.id}']=this.value;verdict('${m.id}')"></div>
+    <div id="verdict">${verdictHTML(m)}</div>
+    <div class="books">
+      <a href="https://www.winamax.fr/paris-sportifs/live" target="_blank" rel="noopener">Winamax ↗</a>
+      <a href="https://www.betclic.fr/live" target="_blank" rel="noopener">Betclic ↗</a>
+      <a href="https://www.unibet.fr/sport/live" target="_blank" rel="noopener">Unibet ↗</a>
+    </div>
     <p class="note">C'est la cote « juste » calculée par le modèle (1 ÷ probabilité). Si ton bookmaker propose plus haut pour le même pari, le modèle le juge intéressant. Plus bas, il vaut mieux passer.</p></div>
   <div class="box"><h3>Pourquoi cet indice <span>ce qui pèse</span></h3><div class="why">
     ${mod.why.map(([t, w]) => `<div class="why-row"><span>${esc(t)}</span><span class="w ${w<0?'neg':''}">${w>0?'+':''}${w}</span><div class="track"><div class="${w<0?'neg':''}" style="width:${Math.abs(w)/maxW*100}%"></div></div></div>`).join('')}
@@ -585,6 +607,7 @@ function toast(msg){
   t.textContent = msg; t.style.opacity = 1; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.opacity = 0, 2200);
 }
 function render(){
+  if(document.activeElement && document.activeElement.id === 'seen') return;
   const v = ui.match ? detailView() : ui.tab === 'alerts' ? alertsView() : ui.tab === 'stats' ? statsView() : ui.tab === 'set' ? setView() : liveView();
   $('#app').innerHTML = `<div class="view">${v}</div>`; nav();
 }
