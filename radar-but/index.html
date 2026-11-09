@@ -263,7 +263,8 @@ function readStats(comp){
   return (s.home.shots + s.away.shots + s.home.poss) > 0 ? s : null;
 }
 function model(m){
-  const min = Math.max(1, m.min), rem = Math.max(0, 90 + (m.min > 90 ? 5 : 3) - min);
+  /* temps restant réel : environ 2 min ajoutées en 1re mi-temps et 6 en 2e (moyenne actuelle) */
+  const min = Math.max(1, m.min), rem = min >= 90 ? Math.max(2, 97 - min) : 96 - min;
   const st = STATS[m.id] && STATS[m.id].s;
   const why = [];
   let f = 1;
@@ -288,9 +289,11 @@ function model(m){
   if(diff === 0){ f *= 1.05; why.push(['Score nul : les deux équipes peuvent pousser', 4]); }
   else if(diff === 1){ f *= 1.08; why.push(['Un but d’écart : l’équipe menée attaque', 6]); }
   else { f *= 0.9; why.push(['Écart de ' + diff + ' buts : le match peut se calmer', -6]); }
-  if(min >= 70){ f *= 1.1; why.push(['Fin de match : les buts sont plus fréquents', 6]); }
+  if(min >= 75){ why.push(['Fin de match : le rythme des buts est le plus élevé', 6]); }
   if(m.status === 'HT'){ why.push(['Mi-temps en cours', 0]); }
-  const rate = 0.03 * f;
+  /* rythme moyen des buts par minute selon la période (les buts sont plus fréquents en fin de match) */
+  const base = min < 45 ? 0.026 : min < 75 ? 0.031 : 0.037;
+  const rate = base * f;
   const P = t => 1 - Math.exp(-rate * Math.max(0, Math.min(t, rem)));
   const p10 = P(10), p20 = P(20), pEnd = P(rem);
   const pHt = min < 45 ? P(45 + 2 - min) : null;
@@ -470,7 +473,7 @@ function liveView(){
     <div class="m">${standOf(top.lg, top.hid) ? esc(top.h) + ' ' + ord(standOf(top.lg, top.hid).r) + ' · ' + esc(top.a) + ' ' + ord((standOf(top.lg, top.aid) || {}).r || 0) + ' au classement' : ''}</div></div></div>
     <div class="hero-foot"><div class="kpi"><b class="num">${top.mod.p10} %</b><span>but dans 10 min</span></div>
     <div class="kpi"><b class="num">${top.mod.p20} %</b><span>but dans 20 min</span></div>
-    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(fairOdds(top.mod.pEnd))}</b><span>cote juste du prochain but</span></div></div></button>`;
+    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(fairOdds(top.mod.pEnd))}</b><span>cote juste « plus de ${top.gh + top.ga},5 buts »</span></div></div></button>`;
   h += `<div class="sec"><h2>Classement live</h2><button class="small-btn" onclick="refresh()">${ui.loading?'…':'Actualiser'}</button></div><div class="list">`;
   list.forEach((m, i) => {
     const st = STATS[m.id] && STATS[m.id].s;
@@ -479,7 +482,7 @@ function liveView(){
       <div class="lg"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span>${esc(m.lgName)} · ${esc(LEAGUE(m.lg).c)}</div>
       <div class="row-team"><span>${esc(m.h)}${rk(m.lg, m.hid)}</span><span class="sc">${m.gh}</span></div>
       <div class="row-team"><span>${esc(m.a)}${rk(m.lg, m.aid)}</span><span class="sc">${m.ga}</span></div>
-      <div class="tags"><span class="tag val">Prochain but ${fo(fairOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</span>${tags}${m.mod.idx >= S.threshold ? '<span class="tag hot">Chaud</span>' : ''}</div></div>
+      <div class="tags"><span class="tag val">Plus de ${m.gh + m.ga},5 buts : ${fo(fairOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</span>${tags}${m.mod.idx >= S.threshold ? '<span class="tag hot">Chaud</span>' : ''}</div></div>
       ${ring(m.mod.idx, 58, 6)}</button>`;
   });
   return h + `</div>`;
