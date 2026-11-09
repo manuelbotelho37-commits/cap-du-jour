@@ -429,7 +429,10 @@ async function refresh(){
       const codes = LEAGUES.map(l => l.id);
       /* 1) le robot GitHub (matchs récupérés par les serveurs de GitHub, rien n'est demandé à ESPN depuis ton téléphone) */
       let bot = null;
-      try{ bot = await fetchOnce(ROBOT + 'live.json?t=' + Date.now()); if(!bot || Date.now() - new Date(bot.at) > 6 * 60e3) bot = null; }catch(e){ bot = null; }
+      /* le robot écrit un fichier par minute : on lit celui d'il y a 1 minute (sûr d'exister), sinon 2, 3… */
+      const stamp = d => d.toISOString().replace(/[-:T]/g, '').slice(0, 12);
+      for(let k = 1; k <= 5 && !bot; k++){ try{ bot = await fetchOnce(ROBOT + 'm/' + stamp(new Date(Date.now() - k * 60e3)) + '.json'); }catch(e){} }
+      if(bot && Date.now() - new Date(bot.at) > 8 * 60e3) bot = null;
       ui.src = bot ? 'robot' : 'direct'; ui.botAt = bot && bot.at;
       const lsP = bot ? Promise.resolve(bot.ls ? (ui.ls = 'ok (robot)', lsMatches(bot.ls)) : null) : getJSON(LSAPI).then(j => { ui.ls = 'ok'; return lsMatches(j); }).catch(e => { ui.ls = 'bloquée (' + (e.status || e.message) + ')'; return null; });
       const list = codes.filter(id => !BAD[id] || isFav(id));
@@ -558,7 +561,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v18${ui.src === 'robot' ? ' · robot' : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v19${ui.src === 'robot' ? ' · robot' : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */

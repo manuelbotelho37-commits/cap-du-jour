@@ -1,6 +1,6 @@
 // Robot Radar But : récupère les matchs en direct (LiveScore + ESPN) depuis les serveurs de GitHub
 // et les écrit dans live.json sur la branche radar-data. Le téléphone ne lit plus que GitHub.
-import { writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'node:fs';
 const FAV = ['eng.1', 'ger.1', 'esp.1', 'ita.1', 'ned.1', 'nor.1', 'den.1', 'gre.1'];
 const UA = { 'user-agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/124 Mobile Safari/537.36', accept: 'application/json' };
 async function get(url) {
@@ -24,6 +24,12 @@ async function once() {
     catch (e) { out.espnErr[lg] = String(e.message || e); }
   }));
   writeFileSync('live.json', JSON.stringify(out));
+  // une copie par minute (m/AAAAMMJJHHMM.json) : GitHub garde 5 min en cache une adresse déjà lue,
+  // une adresse nouvelle à chaque minute est donc toujours fraîche pour le téléphone
+  mkdirSync('m', { recursive: true });
+  const stamp = d => d.toISOString().replace(/[-:T]/g, '').slice(0, 12);
+  writeFileSync('m/' + stamp(new Date(out.at)) + '.json', JSON.stringify(out));
+  for (const f of readdirSync('m')) if (f < stamp(new Date(Date.now() - 12 * 60e3)) + '.json') unlinkSync('m/' + f);
   // classements : une fois par heure
   let st = existsSync('standings.json') ? JSON.parse(readFileSync('standings.json', 'utf8')) : { at: 0, t: {} };
   if (Date.now() - st.at > 3600e3) {

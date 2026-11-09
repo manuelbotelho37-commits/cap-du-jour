@@ -26,7 +26,7 @@ jobs:
           git init -q && git checkout -q -b radar-data
           git config user.name "radar-but-robot" && git config user.email "radar-but-robot@users.noreply.github.com"
           git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          git fetch -q --depth 1 origin radar-data && git checkout -q FETCH_HEAD -- standings.json 2>/dev/null || true
+          git fetch -q --depth 1 origin radar-data && git checkout -q FETCH_HEAD -- . 2>/dev/null || true
           for i in 1 2 3 4 5; do
             node ../src/radar-but/robot/fetch.mjs || true
             git add -A && git commit -q -m "matchs en direct" --allow-empty
