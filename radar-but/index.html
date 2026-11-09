@@ -343,7 +343,8 @@ function toMatch(ev, lg){
   const s = readStats(c.competitors);
   if(s) STATS[ev.id] = {at:Date.now(), s};
   const tn = t => t.team.shortDisplayName || t.team.displayName;
-  return {id:ev.id, lg:lg.id, lgName:lg.n, hid:h.team.id, aid:a.team.id, h:tn(h), a:tn(a),
+  const lk = (ev.links || []).find(l => (l.rel || []).includes('summary')) || (ev.links || [])[0];
+  return {id:ev.id, url:(lk && lk.href) || ('https://www.espn.com/soccer/match/_/gameId/' + ev.id), hfull:h.team.displayName, afull:a.team.displayName, lg:lg.id, lgName:lg.n, hid:h.team.id, aid:a.team.id, h:tn(h), a:tn(a),
     gh:+h.score || 0, ga:+a.score || 0, min:ht ? 45 : clock + (extra ? +extra[1] : 0), status:ht ? 'HT' : 'LIVE',
     events:(c.details || []).filter(d => d.scoringPlay || /card/i.test((d.type && d.type.text) || '')).map(d => ({t:((d.clock && d.clock.displayValue) || '').replace("'", ''), type:d.scoringPlay ? 'Goal' : 'Card', p:d.athletesInvolved && d.athletesInvolved[0] && d.athletesInvolved[0].displayName, tm:(d.team && d.team.id) === h.team.id ? tn(h) : tn(a)}))};
 }
@@ -589,7 +590,10 @@ function detailView(){
     h += `<div class="box"><h3>Stats du match</h3><p class="note">Le flux n'a pas encore publié les stats de ce match. Elles apparaîtront à une prochaine actualisation.</p></div>`;
   }
   if(m.events.length) h += `<div class="box"><h3>Faits du match</h3>${m.events.map(e => `<div class="ev"><span class="t">${esc(e.t)}′</span><span>${e.type==='Goal'?'⚽':'🟨'} ${esc(e.p || '')} <span style="color:var(--dim)">(${esc(e.tm || '')})</span></span></div>`).join('')}</div>`;
-  h += `<a class="btn ghost" style="display:block;text-align:center;text-decoration:none" href="https://www.flashscore.fr/" target="_blank" rel="noopener">Ouvrir Flashscore ↗</a>`;
+  const q = encodeURIComponent('flashscore ' + (m.hfull || m.h) + ' ' + (m.afull || m.a));
+  h += `<div class="books" style="grid-template-columns:1fr 1fr">
+    <a href="https://www.google.com/search?btnI=1&q=${q}" target="_blank" rel="noopener">Flashscore ↗</a>
+    <a href="${esc(m.url || 'https://www.espn.com/soccer/match/_/gameId/' + m.id)}" target="_blank" rel="noopener">Match en direct ↗</a></div>`;
   return h;
 }
 function alertsView(){
