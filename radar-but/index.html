@@ -294,7 +294,7 @@ let STATS = {};         /* stats par match : {fixtureId: {at, home:{...}, away:{
 async function getJSON(url){
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), 12000);
   try{
-    const r = await fetch(url, {cache:'no-store', signal:ac.signal});
+    let r; try{ r = await fetch(url, {cache:'no-store', signal:ac.signal}); }catch(e){ const x = new Error('réseau'); x.status = /livescore/.test(url) ? 'LS-réseau' : 'réseau'; throw x; }
     if(!r.ok){ const e = new Error('Le flux des matchs a répondu ' + r.status + '. Nouvel essai à la prochaine actualisation.'); e.status = r.status; throw e; }
     return await r.json();
   } finally { clearTimeout(t); }
@@ -408,7 +408,8 @@ async function refresh(){
     if(S.demo){ LIVE = demoMatches(); ui.upcoming = []; }
     else {
       const full = !ui.fullAt || Date.now() - ui.fullAt > 5 * 60e3 || !ui.active.length;
-      const codes = full ? ALL_CODES : [...new Set(LEAGUES.map(l => l.id).concat(ui.active))];
+      /* ESPN limite le nombre de demandes : on ne lui demande plus que tes 8 championnats (stats + classements). Le reste du monde vient de LiveScore en une seule demande. */
+      const codes = LEAGUES.map(l => l.id);
       const lsP = getJSON(LSAPI).then(j => { ui.ls = 'ok'; return lsMatches(j); }).catch(e => { ui.ls = 'bloquée (' + (e.status || e.message) + ')'; return null; });
       const list = codes.filter(id => !BAD[id] || isFav(id));
       const res = await pool(list, 6, id => getJSON(API + id + '/scoreboard').then(j => {
@@ -435,7 +436,7 @@ async function refresh(){
       ui.active = [...active];
       const lsl = await lsP;
       if(lsl) lsl.forEach(x => { if(!live.some(m => same(m.hfull || m.h, x.h) && same(m.afull || m.a, x.a))) live.push(x); });
-      if(!lsl && !favOk && fails === list.length){ ui.fullAt = 0; const st = (res.find(r => r.reason && r.reason.status) || {}).reason; throw new Error('Impossible de lire le flux des matchs' + (st ? ' (code ' + st.status + ')' : '') + '. Nouvel essai dans une minute.'); }
+      if(!lsl && !favOk && fails === list.length){ ui.fullAt = 0; const st = (res.find(r => r.reason && r.reason.status) || {}).reason; throw new Error('Impossible de lire le flux des matchs' + (st ? ' (ESPN ' + st.status + ', LiveScore ' + (ui.ls || '?') + ')' : '') + '. Nouvel essai dans une minute.'); }
       LIVE = live;
       if(full || !ui.upcoming.length) ui.upcoming = next.filter(u => isFav(u.lg)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12);
       await loadStandings([...new Set(live.filter(m => !S.hidden[m.id]).map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))].slice(0, 25));
@@ -676,7 +677,7 @@ function clearHist(b){
 function setView(){
   let h = header('Réglages');
   h += `<div class="box" style="margin-top:0"><h3>Source des matchs <span>gratuite, sans compte</span></h3>
-    <p class="note" style="margin-top:0">Les matchs viennent de deux flux publics gratuits : LiveScore (presque tous les matchs du monde, même les petites divisions) et ESPN (stats détaillées et classements). LiveScore : ${ui.ls || 'pas encore testé'}. ESPN : tous les matchs en direct qu'il suit dans le monde (environ ${ALL_CODES.length} championnats et coupes). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
+    <p class="note" style="margin-top:0">Les matchs viennent de deux flux publics gratuits : LiveScore (presque tous les matchs du monde, même les petites divisions) et ESPN (stats détaillées et classements). LiveScore : ${ui.ls || 'pas encore testé'}. ESPN : tous les matchs en direct qu'il suit dans le monde (tes 8 championnats). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
     ${Object.keys(S.hidden).length ? `<button class="btn ghost" onclick="unhideAll()">Réafficher les matchs retirés (${Object.keys(S.hidden).length})</button>` : ''}</div>
   <div class="box"><h3>Actualisation</h3>
     <div class="field"><label for="every">Actualiser toutes les</label><select class="in" id="every" onchange="S.every=+this.value;save();schedule();render()">${[1,2,5].map(v => `<option ${S.every===v?'selected':''} value="${v}">${v} min</option>`).join('')}</select></div></div>
