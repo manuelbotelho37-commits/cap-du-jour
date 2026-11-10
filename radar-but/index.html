@@ -557,6 +557,7 @@ async function refresh(){
       if(h.length > 120) h.shift();
     });
     trackAlerts(prev);
+    if(!S.demo) trackPressure();
     ui.lastAt = new Date();
   }catch(e){ ui.error = e.message; }
   ui.loading = false; render();
@@ -585,10 +586,39 @@ function trackAlerts(prev){
   S.alerts = S.alerts.slice(0, 300);
   save();
 }
-function notify(m){
-  try{ if(navigator.vibrate) navigator.vibrate([120, 60, 120]); }catch(e){}
+/* notification sur le téléphone (Android exige de passer par le service worker) */
+async function sendNote(title, body, tag){
+  try{ if(navigator.vibrate) navigator.vibrate([200, 80, 200, 80, 200]); }catch(e){}
   if(!S.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
-  try{ new Notification('Radar But : indice ' + m.mod.idx, {body:m.h + ' – ' + m.a + ' · ' + m.gh + '-' + m.ga + ' à la ' + m.min + 'e · but avant la fin ' + m.mod.pEnd + ' %'}); }catch(e){}
+  try{
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.ready : null;
+    if(reg && reg.showNotification) await reg.showNotification(title, {body, tag, renotify:true, icon:'icon-192.png', badge:'icon-192.png', vibrate:[200, 80, 200, 80, 200]});
+    else new Notification(title, {body, tag});
+  }catch(e){ try{ new Notification(title, {body, tag}); }catch(_){} }
+}
+function notify(m){
+  sendNote('🔴 But probable : ' + m.h + ' – ' + m.a, m.gh + '-' + m.ga + ' à la ' + m.min + 'e · indice ' + m.mod.idx + ' · ' + m.mod.p10 + ' % de but dans 10 min · cote ' + fo(bookOdds(m.mod.pEnd)), 'but-' + m.id);
+}
+/* alerte « pression » : grosse accélération des actions (tirs cadrés, tirs, corners, xG) sur les 5 dernières minutes */
+const HIST = {}, PRESS = {};
+function trackPressure(){
+  LIVE.forEach(m => {
+    const st = STATS[m.id] && STATS[m.id].s; if(!st || S.hidden[m.id] || m.status === 'HT') return;
+    const now = {t:Date.now(), min:m.min, goals:m.gh + m.ga, sot:st.home.sot + st.away.sot, shots:st.home.shots + st.away.shots, corners:st.home.corners + st.away.corners, xg:(st.home.xg || 0) + (st.away.xg || 0)};
+    const h = HIST[m.id] = (HIST[m.id] || []).filter(x => now.t - x.t < 6 * 60e3 && x.goals === now.goals);
+    const old = h[0]; h.push(now);
+    if(!old || now.t - old.t < 2 * 60e3) return;
+    const d = {sot:now.sot - old.sot, shots:now.shots - old.shots, corners:now.corners - old.corners, xg:now.xg - old.xg};
+    const why = [];
+    if(d.sot >= 2) why.push(d.sot + ' tirs cadrés');
+    if(d.shots >= 4) why.push(d.shots + ' tirs');
+    if(d.corners >= 3) why.push(d.corners + ' corners');
+    if(d.xg >= 0.4) why.push('+' + d.xg.toFixed(2).replace('.', ',') + ' xG');
+    if(!why.length || (PRESS[m.id] && now.t - PRESS[m.id] < 10 * 60e3)) return;
+    PRESS[m.id] = now.t;
+    sendNote('⚡ Grosse pression : ' + m.h + ' – ' + m.a, why.join(', ') + ' en ' + Math.round((now.t - old.t) / 60e3) + ' min · ' + m.gh + '-' + m.ga + ' à la ' + m.min + 'e · ' + m.mod.p10 + ' % de but dans 10 min', 'press-' + m.id);
+    toast('⚡ Pression : ' + m.h + ' – ' + m.a);
+  });
 }
 
 /* ---------- dessin ---------- */
@@ -646,13 +676,13 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v26${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v27${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
 function liveView(){
   const vis = shown(), nHid = LIVE.length - vis.length;
-  let h = header('Tous les matchs en direct') + statusLine() + (ui.diag && !ui.world && !(ui.lastWorldAt && Date.now() - ui.lastWorldAt < 4 * 60e3) ? `<p class="note" style="margin:-6px 0 10px">Monde entier indisponible : ${esc(ui.diag)}</p>` : '');
+  let h = header('Tous les matchs en direct') + statusLine() + (!S.notify ? `<button class="btn ghost" style="margin:0 0 12px" onclick="askNotif()">🔔 Activer les alertes sur mon téléphone</button>` : '') + (ui.diag && !ui.world && !(ui.lastWorldAt && Date.now() - ui.lastWorldAt < 4 * 60e3) ? `<p class="note" style="margin:-6px 0 10px">Monde entier indisponible : ${esc(ui.diag)}</p>` : '');
   const cnt = {}; vis.forEach(m => cnt[m.lg] = (cnt[m.lg] || 0) + 1);
   const lgs = Object.keys(cnt).sort((a, b) => (isFav(b) - isFav(a)) || cnt[b] - cnt[a]);
   if(ui.filter && !cnt[ui.filter]) ui.filter = '';
@@ -797,6 +827,8 @@ function setView(){
 async function askNotif(){
   if(!('Notification' in window)){ toast('Notifications non disponibles sur ce navigateur'); return; }
   const p = await Notification.requestPermission(); S.notify = p === 'granted'; save(); render();
+  if(S.notify) sendNote('Radar But', 'Alertes activées : je te préviens quand un but devient probable ou quand la pression monte fort.', 'test');
+  else toast('Notifications refusées : autorise-les dans les réglages de Chrome');
 }
 
 /* ---------- mode démo (matchs inventés, jamais comptés dans le bilan) ---------- */
