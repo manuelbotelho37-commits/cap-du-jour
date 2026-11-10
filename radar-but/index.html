@@ -246,7 +246,42 @@ const FR_C = {England:'Angleterre', Spain:'Espagne', Italy:'Italie', Germany:'Al
 const slug = x => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const norm = x => ' ' + slug(x).replace(/-/g, ' ').replace(/\b(fc|cf|afc|sc|ac|cd|ud|sd|club|de|the|w|women|femenino|u\d+|ii|b)\b/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
 const same = (a, b) => { const x = norm(a), y = norm(b); return x.length > 2 && y.length > 2 && (x.includes(y) || y.includes(x)); };
+/* matchs du monde entier : on essaie Sofascore puis LiveScore, en direct puis via relais, et on retient ce qui marche */
+const SOFA = 'https://api.sofascore.com/api/v1/sport/football/events/live';
+function sofaMatches(j){
+  if(!j || !Array.isArray(j.events)) throw new Error('format');
+  const now = Date.now() / 1000, out = [];
+  j.events.forEach(ev => {
+    const st = ev.status || {}, code = st.code, t = ev.time || {};
+    const ht = code === 31 || /half ?time|pause/i.test(st.description || '');
+    if(!ht && st.type !== 'inprogress') return;
+    let min = 45;
+    if(!ht){
+      const base = code === 7 ? 45 : code === 41 ? 90 : code === 42 ? 105 : 0;
+      min = t.currentPeriodStartTimestamp ? base + Math.max(1, Math.floor((now - t.currentPeriodStartTimestamp) / 60) + 1) : base + 1;
+    }
+    const tour = ev.tournament || {}, cat = tour.category || {}, ut = tour.uniqueTournament || {};
+    const lg = 'sf:' + (ut.id || tour.id || slug(tour.name));
+    LNAMES[lg] = ut.name || tour.name; LCOUNTRY[lg] = FR_C[cat.name] || cat.name || '';
+    const h = ev.homeTeam || {}, a = ev.awayTeam || {};
+    out.push({id:'sf' + ev.id, src:'sf', url:'https://www.sofascore.com/' + (ev.slug || '') + '/' + (ev.customId || '') + '#id:' + ev.id,
+      hfull:h.name, afull:a.name, lg, lgName:LNAMES[lg], hid:'sf' + h.id, aid:'sf' + a.id, h:h.shortName || h.name, a:a.shortName || a.name,
+      gh:+((ev.homeScore || {}).current) || 0, ga:+((ev.awayScore || {}).current) || 0, min, status:ht ? 'HT' : 'LIVE', events:[]});
+  });
+  return out;
+}
+async function worldMatches(){
+  let order = [['Sofascore', SOFA, sofaMatches], ['LiveScore', LSAPI, lsMatches]];
+  if(ui.world === 'LiveScore') order.reverse();
+  const diag = [];
+  for(const [n, u, f] of order){
+    try{ const r = f(await getJSON(u)); const rel = RELAY_OK[new URL(u).host]; diag.push(n + ' ✓' + (rel ? ' (relais ' + rel + ')' : '')); ui.world = n; ui.diag = diag.join(' · '); return r; }
+    catch(e){ diag.push(n + ' ✗ ' + (e.status || e.message)); }
+  }
+  ui.world = null; ui.diag = diag.join(' · '); return null;
+}
 function lsMatches(j){
+  if(!j || !Array.isArray(j.Stages)) throw new Error('format');
   const out = [];
   (j.Stages || []).forEach(st => (st.Events || []).forEach(ev => {
     const eps = String(ev.Eps || ''), ht = eps === 'HT', mm = /^(\d+)(?:\+(\d+))?'?$/.exec(eps);
@@ -431,10 +466,10 @@ async function refresh(){
       let bot = null;
       /* le robot écrit un fichier par minute : on lit celui d'il y a 1 minute (sûr d'exister), sinon 2, 3… */
       const stamp = d => d.toISOString().replace(/[-:T]/g, '').slice(0, 12);
-      for(let k = 1; k <= 5 && !bot; k++){ try{ bot = await fetchOnce(ROBOT + 'm/' + stamp(new Date(Date.now() - k * 60e3)) + '.json'); }catch(e){} }
+      for(let k = 1; k <= 0 && !bot; k++){ try{ bot = await fetchOnce(ROBOT + 'm/' + stamp(new Date(Date.now() - k * 60e3)) + '.json'); }catch(e){} }
       if(bot && Date.now() - new Date(bot.at) > 8 * 60e3) bot = null;
       ui.src = bot ? 'robot' : 'direct'; ui.botAt = bot && bot.at;
-      const lsP = bot ? Promise.resolve(bot.ls ? (ui.ls = 'ok (robot)', lsMatches(bot.ls)) : null) : getJSON(LSAPI).then(j => { ui.ls = 'ok'; return lsMatches(j); }).catch(e => { ui.ls = 'bloquée (' + (e.status || e.message) + ')'; return null; });
+      const lsP = worldMatches();
       const list = codes.filter(id => !BAD[id] || isFav(id));
       const res = bot ? list.map(id => bot.espn && bot.espn[id] ? {status:'fulfilled', value:{l:LEAGUE(id), j:bot.espn[id]}} : {status:'rejected', reason:{status:'robot'}}) : await pool(list, 6, id => getJSON(API + id + '/scoreboard').then(j => {
         const L = j.leagues && j.leagues[0];
@@ -561,13 +596,13 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v19${ui.src === 'robot' ? ' · robot' : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v20${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
 function liveView(){
   const vis = shown(), nHid = LIVE.length - vis.length;
-  let h = header('Tous les matchs en direct') + statusLine();
+  let h = header('Tous les matchs en direct') + statusLine() + (ui.diag && !ui.world ? `<p class="note" style="margin:-6px 0 10px">Monde entier indisponible : ${esc(ui.diag)}</p>` : '');
   const cnt = {}; vis.forEach(m => cnt[m.lg] = (cnt[m.lg] || 0) + 1);
   const lgs = Object.keys(cnt).sort((a, b) => (isFav(b) - isFav(a)) || cnt[b] - cnt[a]);
   if(ui.filter && !cnt[ui.filter]) ui.filter = '';
@@ -701,7 +736,7 @@ function clearHist(b){
 function setView(){
   let h = header('Réglages');
   h += `<div class="box" style="margin-top:0"><h3>Source des matchs <span>gratuite, sans compte</span></h3>
-    <p class="note" style="margin-top:0">${ui.src === 'robot' ? 'Données récupérées par ton robot GitHub (dernier passage à ' + new Date(ui.botAt).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) + '). ' : 'Robot GitHub indisponible : lecture directe. '}Les matchs viennent de deux flux publics gratuits : LiveScore (presque tous les matchs du monde, même les petites divisions) et ESPN (stats détaillées et classements). LiveScore : ${ui.ls || 'pas encore testé'}${RELAY_OK['prod-public-api.livescore.com'] ? ' (via relais ' + RELAY_OK['prod-public-api.livescore.com'] + ')' : ''}. ESPN : tous les matchs en direct qu'il suit dans le monde (tes 8 championnats). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
+    <p class="note" style="margin-top:0">Les matchs du monde entier viennent de Sofascore ou LiveScore (gratuits), les stats et classements de tes 8 championnats viennent d'ESPN. État : ${esc(ui.diag || 'pas encore testé')}. ESPN : tous les matchs en direct qu'il suit dans le monde (tes 8 championnats). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
     ${Object.keys(S.hidden).length ? `<button class="btn ghost" onclick="unhideAll()">Réafficher les matchs retirés (${Object.keys(S.hidden).length})</button>` : ''}</div>
   <div class="box"><h3>Actualisation</h3>
     <div class="field"><label for="every">Actualiser toutes les</label><select class="in" id="every" onchange="S.every=+this.value;save();schedule();render()">${[1,2,5].map(v => `<option ${S.every===v?'selected':''} value="${v}">${v} min</option>`).join('')}</select></div></div>
