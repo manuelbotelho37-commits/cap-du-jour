@@ -597,7 +597,7 @@ async function sendNote(title, body, tag){
   }catch(e){ try{ new Notification(title, {body, tag}); }catch(_){} }
 }
 function notify(m){
-  sendNote('🔴 But probable : ' + m.h + ' – ' + m.a, m.gh + '-' + m.ga + ' à la ' + m.min + 'e · indice ' + m.mod.idx + ' · ' + m.mod.p10 + ' % de but dans 10 min · cote ' + fo(bookOdds(m.mod.pEnd)), 'but-' + m.id);
+  sendNote('🔴 ' + m.h + ' – ' + m.a, 'But probable · ' + m.gh + '-' + m.ga + ' à la ' + m.min + 'e · indice ' + m.mod.idx + ' · ' + m.mod.p10 + ' % de but dans 10 min · cote ' + fo(bookOdds(m.mod.pEnd)), 'but-' + m.id);
 }
 /* alerte « pression » : grosse accélération des actions (tirs cadrés, tirs, corners, xG) sur les 5 dernières minutes */
 const HIST = {}, PRESS = {};
@@ -616,7 +616,7 @@ function trackPressure(){
     if(d.xg >= 0.4) why.push('+' + d.xg.toFixed(2).replace('.', ',') + ' xG');
     if(!why.length || (PRESS[m.id] && now.t - PRESS[m.id] < 10 * 60e3)) return;
     PRESS[m.id] = now.t;
-    sendNote('⚡ Grosse pression : ' + m.h + ' – ' + m.a, why.join(', ') + ' en ' + Math.round((now.t - old.t) / 60e3) + ' min · ' + m.gh + '-' + m.ga + ' à la ' + m.min + 'e · ' + m.mod.p10 + ' % de but dans 10 min', 'press-' + m.id);
+    sendNote('⚡ ' + m.h + ' – ' + m.a, 'Grosse pression : ' + why.join(', ') + ' en ' + Math.round((now.t - old.t) / 60e3) + ' min · ' + m.gh + '-' + m.ga + ' à la ' + m.min + 'e · ' + m.mod.p10 + ' % de but dans 10 min', 'press-' + m.id);
     toast('⚡ Pression : ' + m.h + ' – ' + m.a);
   });
 }
@@ -676,7 +676,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v27${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v28${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */

@@ -2,6 +2,7 @@
   "name": "Radar But",
   "short_name": "Radar But",
   "description": "Les matchs en direct où un but est le plus probable",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
