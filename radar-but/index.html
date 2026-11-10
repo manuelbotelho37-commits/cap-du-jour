@@ -270,9 +270,29 @@ function sofaMatches(j){
   });
   return out;
 }
+const S365 = 'https://webws.365scores.com/web/games/current/?appTypeId=5&langId=1&timezoneName=Europe/Paris&sports=1';
+function s365Matches(j){
+  if(!j || !Array.isArray(j.games)) throw new Error('format');
+  const comps = {}, ctry = {};
+  (j.competitions || []).forEach(c => comps[c.id] = c);
+  (j.countries || []).forEach(c => ctry[c.id] = c.name);
+  const out = [];
+  j.games.forEach(g => {
+    if(g.statusGroup !== 3) return;
+    const ht = /^HT$/i.test(g.shortStatusText || '') || /half ?time|pause/i.test(g.statusText || '');
+    const c = comps[g.competitionId] || {}, lg = 's3:' + g.competitionId;
+    LNAMES[lg] = c.name || g.competitionDisplayName || 'Compétition'; const cn = ctry[c.countryId] || ''; LCOUNTRY[lg] = FR_C[cn] || cn;
+    const h = g.homeCompetitor || {}, a = g.awayCompetitor || {};
+    const q = encodeURIComponent('\\ site:flashscore.fr ' + h.name + ' ' + a.name);
+    out.push({id:'s3' + g.id, src:'s3', url:'https://duckduckgo.com/?q=' + q, hfull:h.name, afull:a.name, lg, lgName:LNAMES[lg], hid:'s3' + h.id, aid:'s3' + a.id,
+      h:h.name, a:a.name, gh:Math.max(0, +h.score || 0), ga:Math.max(0, +a.score || 0),
+      min:ht ? 45 : Math.max(1, Math.round(+g.gameTime || 1)), status:ht ? 'HT' : 'LIVE', events:[]});
+  });
+  return out;
+}
 async function worldMatches(){
-  let order = [['Sofascore', SOFA, sofaMatches], ['LiveScore', LSAPI, lsMatches]];
-  if(ui.world === 'LiveScore') order.reverse();
+  let order = [['365Scores', S365, s365Matches], ['Sofascore', SOFA, sofaMatches], ['LiveScore', LSAPI, lsMatches]];
+  if(ui.world){ const k = order.findIndex(o => o[0] === ui.world); if(k > 0) order.unshift(order.splice(k, 1)[0]); }
   const diag = [];
   for(const [n, u, f] of order){
     try{ const r = f(await getJSON(u)); const rel = RELAY_OK[new URL(u).host]; diag.push(n + ' ✓' + (rel ? ' (relais ' + rel + ')' : '')); ui.world = n; ui.diag = diag.join(' · '); return r; }
@@ -596,7 +616,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v20${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v21${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
@@ -736,7 +756,7 @@ function clearHist(b){
 function setView(){
   let h = header('Réglages');
   h += `<div class="box" style="margin-top:0"><h3>Source des matchs <span>gratuite, sans compte</span></h3>
-    <p class="note" style="margin-top:0">Les matchs du monde entier viennent de Sofascore ou LiveScore (gratuits), les stats et classements de tes 8 championnats viennent d'ESPN. État : ${esc(ui.diag || 'pas encore testé')}. ESPN : tous les matchs en direct qu'il suit dans le monde (tes 8 championnats). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
+    <p class="note" style="margin-top:0">Les matchs du monde entier viennent de 365Scores, Sofascore ou LiveScore (gratuits), les stats et classements de tes 8 championnats viennent d'ESPN. État : ${esc(ui.diag || 'pas encore testé')}. ESPN : tous les matchs en direct qu'il suit dans le monde (tes 8 championnats). Tes 8 championnats passent en premier dans les filtres. Touche ✕ sur un match pour le retirer de la liste.</p>
     ${Object.keys(S.hidden).length ? `<button class="btn ghost" onclick="unhideAll()">Réafficher les matchs retirés (${Object.keys(S.hidden).length})</button>` : ''}</div>
   <div class="box"><h3>Actualisation</h3>
     <div class="field"><label for="every">Actualiser toutes les</label><select class="in" id="every" onchange="S.every=+this.value;save();schedule();render()">${[1,2,5].map(v => `<option ${S.every===v?'selected':''} value="${v}">${v} min</option>`).join('')}</select></div></div>
