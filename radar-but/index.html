@@ -290,6 +290,24 @@ function s365Matches(j){
   });
   return out;
 }
+/* stats en direct 365Scores (tirs, tirs cadrés, corners, possession) pour départager les matchs hors de tes 8 championnats */
+function find365Stats(o){
+  if(!o || typeof o !== 'object') return null;
+  if(Array.isArray(o.statistics) && o.statistics.some(x => x && x.name != null && x.competitorId != null)) return o.statistics;
+  for(const k in o){ const r = find365Stats(o[k]); if(r) return r; }
+  return null;
+}
+async function load365Stats(list){
+  const todo = list.filter(m => m.src === 's3' && m.status !== 'HT').sort((a, b) => b.min - a.min).slice(0, 25);
+  await pool(todo, 4, async m => {
+    const j = await getJSON('https://webws.365scores.com/web/game/stats/?appTypeId=5&langId=1&timezoneName=Europe/Paris&games=' + m.id.slice(2));
+    const st = find365Stats(j); if(!st) return;
+    const v = (cid, re) => { const x = st.find(z => String(z.competitorId) === String(cid) && re.test(z.name || '')); return x ? parseFloat(String(x.value).replace('%', '')) || 0 : 0; };
+    const side = cid => ({sot:v(cid, /on target|cadr/i), shots:v(cid, /^(total )?shots$|total shots|tirs$/i), corners:v(cid, /corner/i), poss:v(cid, /possession/i), xg:v(cid, /expected goals|xg/i), fouls:v(cid, /foul/i)});
+    const hs = side(m.hid.slice(2)), as = side(m.aid.slice(2));
+    if(hs.shots + as.shots + hs.sot + as.sot + hs.corners + as.corners + hs.poss > 0) STATS[m.id] = {at:Date.now(), s:{home:hs, away:as}};
+  });
+}
 async function worldMatches(){
   let order = [['365Scores', S365, s365Matches], ['Sofascore', SOFA, sofaMatches], ['LiveScore', LSAPI, lsMatches]];
   if(ui.world){ const k = order.findIndex(o => o[0] === ui.world); if(k > 0) order.unshift(order.splice(k, 1)[0]); }
@@ -520,6 +538,7 @@ async function refresh(){
       if(full || !ui.upcoming.length) ui.upcoming = next.filter(u => isFav(u.lg)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12);
       await loadStandings([...new Set(live.filter(m => !S.hidden[m.id]).map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))].slice(0, 25));
     }
+    if(!S.demo){ try{ await load365Stats(LIVE.filter(m => !S.hidden[m.id])); }catch(e){} }
     LIVE.forEach(m => m.mod = model(m));
     LIVE.forEach(m => {
       const o = bookOdds(m.mod.pEnd), h = ODDS[m.id] = ODDS[m.id] || [];
@@ -616,7 +635,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v21${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v22${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
