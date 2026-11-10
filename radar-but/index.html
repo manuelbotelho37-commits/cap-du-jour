@@ -208,6 +208,9 @@ nav.tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1
 .hero.red{background:linear-gradient(160deg,#8E1616,#5A0D0D);border-color:#FF4D4D;animation:redpulse 1.6s ease-in-out infinite}
 @keyframes redpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,77,.55)}50%{box-shadow:0 0 0 7px rgba(255,77,77,0)}}
 @media (prefers-reduced-motion:reduce){.card.red,.hero.red{animation:none}}
+.bigline{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
+.bigmin{font-family:var(--mono);font-weight:700;font-size:1.25rem;color:var(--gain);background:rgba(62,211,160,.12);border:1px solid rgba(62,211,160,.45);border-radius:10px;padding:3px 9px}
+.bigsc{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1;color:var(--ink);letter-spacing:.02em}
 .small-btn{border:1.5px solid var(--line);background:var(--panel2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:.85rem;color:var(--ink)}
 </style>
 
@@ -643,7 +646,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v25${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v26${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
@@ -671,7 +674,8 @@ function liveView(){
     const H = standOf(m.lg, m.hid), A = standOf(m.lg, m.aid);
     h += `<div class="hero${m.mod.idx >= S.threshold && m.status !== 'HT' ? ' red' : ''}" style="margin-bottom:12px" role="button" tabindex="0" onclick="openM('${m.id}')"><span class="x" role="button" aria-label="Retirer ce match" onclick="hideM(event,'${m.id}')">✕</span><div class="eyebrow">N°${i + 1}${i === 0 ? ' en ce moment' : ''}${m.mod.idx >= S.threshold && m.status !== 'HT' ? ' · chaud' : ''}</div>
     <div class="hero-row">${ring(m.mod.idx, 96, 9)}<div class="hero-teams"><div class="t">${esc(m.h)} – ${esc(m.a)}</div>
-    <div class="m"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span> · ${m.gh}-${m.ga} · ${esc(m.lgName)} (${esc(LEAGUE(m.lg).c)})</div>
+    <div class="bigline"><span class="bigmin">${m.status==='HT'?'MT':m.min+'′'}</span><span class="bigsc">${m.gh} - ${m.ga}</span></div>
+    <div class="m">${esc(m.lgName)} (${esc(LEAGUE(m.lg).c)})</div>
     ${H && A ? `<div class="m">${esc(m.h)} ${ord(H.r)} · ${esc(m.a)} ${ord(A.r)} au classement</div>` : ''}</div></div>
     <div class="hero-foot"><div class="kpi"><b class="num">${m.mod.p10} %</b><span>but dans 10 min</span></div>
     <div class="kpi"><b class="num">${m.mod.p20} %</b><span>but dans 20 min</span></div>
