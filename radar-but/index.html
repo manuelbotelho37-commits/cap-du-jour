@@ -211,6 +211,8 @@ nav.tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1
 .bigline{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
 .bigmin{font-family:var(--mono);font-weight:700;font-size:1.25rem;color:var(--gain);background:rgba(62,211,160,.12);border:1px solid rgba(62,211,160,.45);border-radius:10px;padding:3px 9px}
 .bigsc{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1;color:var(--ink);letter-spacing:.02em}
+.goals{display:flex;flex-wrap:wrap;gap:6px 12px;margin:2px 0 4px;font-size:.92rem;color:var(--ink)}
+.goals b{color:var(--gold);font-family:var(--mono)}
 .small-btn{border:1.5px solid var(--line);background:var(--panel2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:.85rem;color:var(--ink)}
 </style>
 
@@ -556,6 +558,7 @@ async function refresh(){
       if(o && (!h.length || h[h.length - 1].min !== m.min || h[h.length - 1].o !== o)) h.push({min:m.min, o});
       if(h.length > 120) h.shift();
     });
+    if(!S.demo) trackGoals(prev);
     trackAlerts(prev);
     if(!S.demo) trackPressure();
     ui.lastAt = new Date();
@@ -600,6 +603,33 @@ function notify(m){
   sendNote('🔴 ' + m.h + ' – ' + m.a, 'But probable · ' + m.gh + '-' + m.ga + ' à la ' + m.min + 'e · indice ' + m.mod.idx + ' · ' + m.mod.p10 + ' % de but dans 10 min · cote ' + fo(bookOdds(m.mod.pEnd)), 'but-' + m.id);
 }
 /* alerte « pression » : grosse accélération des actions (tirs cadrés, tirs, corners, xG) sur les 5 dernières minutes */
+/* buts : minute et équipe, repérés quand le score change (toutes sources) ou lus dans le flux ESPN */
+let GOALS = {}; try{ GOALS = JSON.parse(localStorage.getItem('radarbut_goals') || '{}') || {}; }catch(e){}
+for(const k in GOALS) if(Date.now() - (GOALS[k].at || 0) > 12 * 3600e3) delete GOALS[k];
+function trackGoals(prev){
+  LIVE.forEach(m => {
+    const g = GOALS[m.id] = GOALS[m.id] || {at:Date.now(), list:[]};
+    const espn = (m.events || []).filter(e => e.type === 'Goal');
+    if(espn.length) g.list = espn.map(e => ({min:parseInt(e.t, 10) || e.t, team:e.tm, p:e.p}));
+    const p = prev[m.id]; if(!p) return;
+    [['h', 'gh'], ['a', 'ga']].forEach(([t, k]) => {
+      for(let n = p[k]; n < m[k]; n++){
+        if(!espn.length) g.list.push({min:m.min, team:m[t]});
+        const sc = m.gh + ' - ' + m.ga;
+        sendNote('⚽ BUT ! ' + m.h + ' ' + sc + ' ' + m.a, m[t] + ' marque à la ' + m.min + 'e minute · ' + m.lgName, 'goal-' + m.id + '-' + m.gh + '-' + m.ga);
+        toast('⚽ But à la ' + m.min + 'e : ' + m[t]);
+      }
+    });
+    g.at = Date.now();
+  });
+  try{ localStorage.setItem('radarbut_goals', JSON.stringify(GOALS)); }catch(e){}
+}
+function goalsLine(m){
+  const l = (GOALS[m.id] && GOALS[m.id].list) || [];
+  if(!l.length) return (m.gh + m.ga) ? '<div class="goals">⚽ buts marqués avant l’ouverture de l’appli</div>' : '';
+  const miss = m.gh + m.ga - l.length;
+  return `<div class="goals">${l.map(x => `<span>⚽ <b>${esc(x.min)}′</b> ${esc(x.team || '')}</span>`).join('')}${miss > 0 ? `<span style="color:var(--dim)">+ ${miss} but${miss > 1 ? 's' : ''} avant l’ouverture</span>` : ''}</div>`;
+}
 const HIST = {}, PRESS = {};
 function trackPressure(){
   LIVE.forEach(m => {
@@ -676,7 +706,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v28${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v29${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
@@ -705,6 +735,7 @@ function liveView(){
     h += `<div class="hero${m.mod.idx >= S.threshold && m.status !== 'HT' ? ' red' : ''}" style="margin-bottom:12px" role="button" tabindex="0" onclick="openM('${m.id}')"><span class="x" role="button" aria-label="Retirer ce match" onclick="hideM(event,'${m.id}')">✕</span><div class="eyebrow">N°${i + 1}${i === 0 ? ' en ce moment' : ''}${m.mod.idx >= S.threshold && m.status !== 'HT' ? ' · chaud' : ''}</div>
     <div class="hero-row">${ring(m.mod.idx, 96, 9)}<div class="hero-teams"><div class="t">${esc(m.h)} – ${esc(m.a)}</div>
     <div class="bigline"><span class="bigmin">${m.status==='HT'?'MT':m.min+'′'}</span><span class="bigsc">${m.gh} - ${m.ga}</span></div>
+    ${goalsLine(m)}
     <div class="m">${esc(m.lgName)} (${esc(LEAGUE(m.lg).c)})</div>
     ${H && A ? `<div class="m">${esc(m.h)} ${ord(H.r)} · ${esc(m.a)} ${ord(A.r)} au classement</div>` : ''}</div></div>
     <div class="hero-foot"><div class="kpi"><b class="num">${m.mod.p10} %</b><span>but dans 10 min</span></div>
