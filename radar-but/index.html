@@ -531,7 +531,10 @@ async function refresh(){
       });
       if(full) ui.fullAt = Date.now();
       ui.active = [...active];
-      const lsl = await lsP;
+      let lsl = await lsP;
+      /* si la source mondiale rate une fois, on garde les derniers matchs connus (4 min max) au lieu de tout effacer */
+      if(lsl){ ui.lastWorld = lsl; ui.lastWorldAt = Date.now(); }
+      else if(ui.lastWorld && Date.now() - ui.lastWorldAt < 4 * 60e3) lsl = ui.lastWorld;
       if(lsl) lsl.forEach(x => { if(!live.some(m => same(m.hfull || m.h, x.h) && same(m.afull || m.a, x.a))) live.push(x); });
       if(!lsl && !favOk && fails === list.length){ ui.fullAt = 0; const st = (res.find(r => r.reason && r.reason.status) || {}).reason; throw new Error('Impossible de lire le flux des matchs' + (st ? ' (ESPN ' + st.status + ', LiveScore ' + (ui.ls || '?') + ')' : '') + '. Nouvel essai dans une minute.'); }
       LIVE = live;
@@ -635,13 +638,13 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v22${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v23${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
 function liveView(){
   const vis = shown(), nHid = LIVE.length - vis.length;
-  let h = header('Tous les matchs en direct') + statusLine() + (ui.diag && !ui.world ? `<p class="note" style="margin:-6px 0 10px">Monde entier indisponible : ${esc(ui.diag)}</p>` : '');
+  let h = header('Tous les matchs en direct') + statusLine() + (ui.diag && !ui.world && !(ui.lastWorldAt && Date.now() - ui.lastWorldAt < 4 * 60e3) ? `<p class="note" style="margin:-6px 0 10px">Monde entier indisponible : ${esc(ui.diag)}</p>` : '');
   const cnt = {}; vis.forEach(m => cnt[m.lg] = (cnt[m.lg] || 0) + 1);
   const lgs = Object.keys(cnt).sort((a, b) => (isFav(b) - isFav(a)) || cnt[b] - cnt[a]);
   if(ui.filter && !cnt[ui.filter]) ui.filter = '';
@@ -814,7 +817,12 @@ function render(){
 render();
 refresh();
 schedule();
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(r => setInterval(() => r.update().catch(() => {}), 5 * 60e3)).catch(() => {});
+  /* nouvelle version publiée : l'appli se recharge toute seule */
+  let had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if(had) location.reload(); had = true; });
+}
 </script>
 
 </body>
