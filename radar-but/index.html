@@ -643,7 +643,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v24${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v25${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
@@ -663,24 +663,20 @@ function liveView(){
       <button class="btn ghost" onclick="refresh()">Actualiser</button>${S.demo ? '' : `<button class="btn ghost" onclick="S.demo=true;save();refresh()">Voir le mode démo</button>`}</div>
       ${up ? `<div class="box"><h3>Prochains matchs <span>à l’heure de ton téléphone</span></h3>${up}</div>` : ''}`;
   }
-  const top = list[0];
-  h += `<div class="hero${top.mod.idx >= S.threshold && top.status !== 'HT' ? ' red' : ''}" role="button" tabindex="0" onclick="openM('${top.id}')"><span class="x" role="button" aria-label="Retirer ce match" onclick="hideM(event,'${top.id}')">✕</span><div class="eyebrow">N°1 en ce moment</div>
-    <div class="hero-row">${ring(top.mod.idx, 96, 9)}<div class="hero-teams"><div class="t">${esc(top.h)} – ${esc(top.a)}</div>
-    <div class="m"><span class="min">${top.status==='HT'?'MT':top.min+'′'}</span> · ${top.gh}-${top.ga} · ${esc(top.lgName)} (${esc(LEAGUE(top.lg).c)})</div>
-    <div class="m">${standOf(top.lg, top.hid) ? esc(top.h) + ' ' + ord(standOf(top.lg, top.hid).r) + ' · ' + esc(top.a) + ' ' + ord((standOf(top.lg, top.aid) || {}).r || 0) + ' au classement' : ''}</div></div></div>
-    <div class="hero-foot"><div class="kpi"><b class="num">${top.mod.p10} %</b><span>but dans 10 min</span></div>
-    <div class="kpi"><b class="num">${top.mod.p20} %</b><span>but dans 20 min</span></div>
-    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(bookOdds(top.mod.pEnd))}</b><span>cote estimée « plus de ${top.gh + top.ga},5 buts »</span></div></div></div>`;
+  /* chaque match a sa grande carte, comme le N°1 */
   h += `<div class="sec"><h2>Du plus chaud au moins chaud</h2><button class="small-btn" onclick="refresh()">${ui.loading?'…':'Actualiser'}</button></div><div class="list">`;
   list.forEach((m, i) => {
     const st = STATS[m.id] && STATS[m.id].s;
     const tags = st ? `<span class="tag">${st.home.sot + st.away.sot} tirs cadrés</span><span class="tag">${st.home.shots + st.away.shots} tirs</span><span class="tag">${st.home.corners + st.away.corners} corners</span>` : `<span class="tag">stats pas encore publiées</span>`;
-    h += `<div class="card${m.mod.idx >= S.threshold && m.status !== 'HT' ? ' red' : ''}" role="button" tabindex="0" onclick="openM('${m.id}')"><span class="rk">${i+1}</span><div class="mid">
-      <div class="lg"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.lgName)} · ${esc(LEAGUE(m.lg).c)}</span><span class="x" role="button" aria-label="Retirer ce match" onclick="hideM(event,'${m.id}')">✕</span></div>
-      <div class="row-team"><span>${esc(m.h)}${rk(m.lg, m.hid)}</span><span class="sc">${m.gh}</span></div>
-      <div class="row-team"><span>${esc(m.a)}${rk(m.lg, m.aid)}</span><span class="sc">${m.ga}</span></div>
-      <div class="tags"><span class="tag val">Plus de ${m.gh + m.ga},5 buts : ${fo(bookOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</span>${tags}${m.mod.idx >= S.threshold ? '<span class="tag hot">Chaud</span>' : ''}</div></div>
-      ${ring(m.mod.idx, 58, 6)}</div>`;
+    const H = standOf(m.lg, m.hid), A = standOf(m.lg, m.aid);
+    h += `<div class="hero${m.mod.idx >= S.threshold && m.status !== 'HT' ? ' red' : ''}" style="margin-bottom:12px" role="button" tabindex="0" onclick="openM('${m.id}')"><span class="x" role="button" aria-label="Retirer ce match" onclick="hideM(event,'${m.id}')">✕</span><div class="eyebrow">N°${i + 1}${i === 0 ? ' en ce moment' : ''}${m.mod.idx >= S.threshold && m.status !== 'HT' ? ' · chaud' : ''}</div>
+    <div class="hero-row">${ring(m.mod.idx, 96, 9)}<div class="hero-teams"><div class="t">${esc(m.h)} – ${esc(m.a)}</div>
+    <div class="m"><span class="min">${m.status==='HT'?'MT':m.min+'′'}</span> · ${m.gh}-${m.ga} · ${esc(m.lgName)} (${esc(LEAGUE(m.lg).c)})</div>
+    ${H && A ? `<div class="m">${esc(m.h)} ${ord(H.r)} · ${esc(m.a)} ${ord(A.r)} au classement</div>` : ''}</div></div>
+    <div class="hero-foot"><div class="kpi"><b class="num">${m.mod.p10} %</b><span>but dans 10 min</span></div>
+    <div class="kpi"><b class="num">${m.mod.p20} %</b><span>but dans 20 min</span></div>
+    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(bookOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</b><span>cote estimée « plus de ${m.gh + m.ga},5 buts »</span></div></div>
+    <div class="tags" style="margin-top:10px">${tags}</div></div>`;
   });
   return h + `</div>` + (back ? `<div style="margin-top:14px">${back}</div>` : '');
 }
