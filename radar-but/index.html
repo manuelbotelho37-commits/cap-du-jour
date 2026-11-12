@@ -314,7 +314,7 @@ function find365Stats(o){
   return null;
 }
 async function load365Stats(list){
-  const todo = list.filter(m => m.src === 's3' && m.status !== 'HT').sort((a, b) => b.min - a.min).slice(0, 25);
+  const todo = list.filter(m => m.src === 's3' && (m.status !== 'HT' || !STATS[m.id] || Date.now() - STATS[m.id].at > 5 * 60e3)).sort((a, b) => b.min - a.min).slice(0, 25);
   await pool(todo, 4, async m => {
     const j = await getJSON('https://webws.365scores.com/web/game/stats/?appTypeId=5&langId=1&timezoneName=Europe/Paris&games=' + m.id.slice(2));
     const st = find365Stats(j); if(!st) return;
@@ -472,6 +472,13 @@ function model(m){
     const gpm = ((H.gf + H.ga) / H.gp + (A.gf + A.ga) / A.gp) / 2;
     lam = Math.max(2.0, Math.min(3.8, 0.5 * lam + 0.5 * gpm));
     why.push(['Avant-match : leurs matchs font ' + fr(gpm.toFixed(1)) + ' buts en moyenne (' + ord(H.r) + ' contre ' + ord(A.r) + ')', Math.round((gpm / (LG_GOALS[m.lg] || 2.8) - 1) * 30)]);
+  }
+  /* 1 bis. les buts déjà marqués disent si le match est ouvert : on mélange prudemment avec l'attente de départ */
+  const played = m.status === 'HT' ? 45 : min;
+  if(played >= 15){
+    const obs = (m.gh + m.ga) / played * 90, w = Math.min(0.35, played / 90 * 0.35);
+    const lam0 = lam; lam = Math.max(1.8, Math.min(4.2, lam * (1 - w) + obs * w));
+    if(Math.abs(lam - lam0) > 0.05) why.push([(m.gh + m.ga) + ' but' + (m.gh + m.ga > 1 ? 's' : '') + ' en ' + played + ' min : match ' + (lam > lam0 ? 'plus ouvert' : 'plus fermé') + ' que prévu', Math.round((lam / lam0 - 1) * 40)]);
   }
   /* 2. ce que montre le match : effet volontairement modéré, les bookmakers bougent peu sur les tirs */
   let f = 1;
@@ -788,7 +795,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v32${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v33${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
