@@ -206,6 +206,11 @@ nav.tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1
 .card.red{background:linear-gradient(135deg,#7A1414,#B3201F);border:1.5px solid #FF4D4D;animation:redpulse 1.6s ease-in-out infinite}
 .card.red .lg,.card.red .rk,.card.red .rank{color:#FFD6D6}
 .hero.red{background:linear-gradient(160deg,#8E1616,#5A0D0D);border-color:#FF4D4D;animation:redpulse 1.6s ease-in-out infinite}
+.hero.fire{border-width:2px;border-color:#FF8A3D;background:linear-gradient(160deg,#B3261E,#6B0F0F)}
+.hero.fire .eyebrow{color:#FFD18A}
+.fire-box{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(0,0,0,.28);border:1px solid rgba(255,160,90,.45)}
+.fire-h{font-weight:700;color:#FFD18A;margin-bottom:6px}
+.fire-box p{margin:4px 0;font-size:.92rem;line-height:1.4;color:var(--ink)}
 @keyframes redpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,77,.55)}50%{box-shadow:0 0 0 7px rgba(255,77,77,0)}}
 @media (prefers-reduced-motion:reduce){.card.red,.hero.red{animation:none}}
 .bigline{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
@@ -666,24 +671,66 @@ function goalsLine(m){
   return `<div class="goals">${l.map(x => `<span>⚽ <b>${esc(x.min)}′</b> ${x.p ? '<b class="scorer">' + esc(x.p) + '</b> ' : ''}${esc(x.p ? '(' + (x.team || '') + ')' : (x.team || ''))}</span>`).join('')}${miss > 0 ? `<span style="color:var(--dim)">+ ${miss} but${miss > 1 ? 's' : ''} avant l’ouverture</span>` : ''}</div>`;
 }
 const HIST = {}, PRESS = {};
+/* match « en feu » : beaucoup d'occasions ces dernières minutes → tout en haut + analyse */
+const FIRE = {};
+const FIRE_MS = 8 * 60e3;
+const fireOn = m => !!FIRE[m.id] && Date.now() - FIRE[m.id].at < FIRE_MS && m.status !== 'HT';
 function trackPressure(){
   LIVE.forEach(m => {
-    const st = STATS[m.id] && STATS[m.id].s; if(!st || isHid(m) || m.status === 'HT') return;
-    const now = {t:Date.now(), min:m.min, goals:m.gh + m.ga, sot:st.home.sot + st.away.sot, shots:st.home.shots + st.away.shots, corners:st.home.corners + st.away.corners, xg:(st.home.xg || 0) + (st.away.xg || 0)};
-    const h = HIST[m.id] = (HIST[m.id] || []).filter(x => now.t - x.t < 6 * 60e3 && x.goals === now.goals);
+    const st = STATS[m.id] && STATS[m.id].s; if(!st || m.status === 'HT') return;
+    const side = x => ({sot:x.sot || 0, shots:x.shots || 0, corners:x.corners || 0, xg:x.xg || 0});
+    const now = {t:Date.now(), min:m.min, goals:m.gh + m.ga, h:side(st.home), a:side(st.away)};
+    const h = HIST[m.id] = (HIST[m.id] || []).filter(x => now.t - x.t < 6 * 60e3);
     const old = h[0]; h.push(now);
     if(!old || now.t - old.t < 2 * 60e3) return;
-    const d = {sot:now.sot - old.sot, shots:now.shots - old.shots, corners:now.corners - old.corners, xg:now.xg - old.xg};
+    const dd = k => ({sot:now[k].sot - old[k].sot, shots:now[k].shots - old[k].shots, corners:now[k].corners - old[k].corners, xg:now[k].xg - old[k].xg});
+    const dh = dd('h'), da = dd('a');
+    const d = {sot:dh.sot + da.sot, shots:dh.shots + da.shots, corners:dh.corners + da.corners, xg:dh.xg + da.xg};
     const why = [];
     if(d.sot >= 2) why.push(d.sot + ' tirs cadrés');
     if(d.shots >= 4) why.push(d.shots + ' tirs');
     if(d.corners >= 3) why.push(d.corners + ' corners');
     if(d.xg >= 0.4) why.push('+' + d.xg.toFixed(2).replace('.', ',') + ' xG');
-    if(!why.length || (PRESS[m.id] && now.t - PRESS[m.id] < 10 * 60e3)) return;
+    if(!why.length) return;
+    const mins = Math.max(1, Math.round((now.t - old.t) / 60e3));
+    FIRE[m.id] = {at:now.t, min:m.min, mins, d, dh, da, why, score:d.sot * 3 + d.shots + d.corners * 1.5 + d.xg * 10, goals:now.goals};
+    if(isHid(m) || (PRESS[m.id] && now.t - PRESS[m.id] < 10 * 60e3)) return;
     PRESS[m.id] = now.t;
-    sendNote('⚡ ' + m.h + ' – ' + m.a, 'Grosse pression : ' + why.join(', ') + ' en ' + Math.round((now.t - old.t) / 60e3) + ' min · ' + m.gh + '-' + m.ga + ' à la ' + m.min + 'e · ' + m.mod.p10 + ' % de but dans 10 min', 'press-' + m.id);
-    toast('⚡ Pression : ' + m.h + ' – ' + m.a);
+    sendNote('🔥 ' + m.h + ' – ' + m.a, 'Match en feu : ' + why.join(', ') + ' en ' + mins + ' min · ' + m.gh + '-' + m.ga + ' à la ' + m.min + 'e · ' + m.mod.p10 + ' % de but dans 10 min', 'press-' + m.id);
+    toast('🔥 En feu : ' + m.h + ' – ' + m.a);
   });
+}
+const plur = (n, w) => n + ' ' + w + (Math.abs(n) > 1 ? 's' : '');
+function fireAnalysis(m){
+  const f = FIRE[m.id]; if(!f) return '';
+  const st = STATS[m.id] && STATS[m.id].s, L = [];
+  const parts = [];
+  if(f.d.sot > 0) parts.push(plur(f.d.sot, 'tir') + ' cadré' + (f.d.sot > 1 ? 's' : ''));
+  if(f.d.shots > 0) parts.push(plur(f.d.shots, 'tir') + ' au total');
+  if(f.d.corners > 0) parts.push(plur(f.d.corners, 'corner'));
+  if(f.d.xg >= 0.05) parts.push('+' + f.d.xg.toFixed(2).replace('.', ',') + ' xG');
+  L.push(`<b>Ces ${f.mins} dernières minutes</b> : ${parts.join(', ')}.`);
+  const ph = f.dh.sot * 3 + f.dh.shots + f.dh.corners + f.dh.xg * 10, pa = f.da.sot * 3 + f.da.shots + f.da.corners + f.da.xg * 10, tot = ph + pa || 1;
+  const push = ph / tot >= 0.7 ? 'h' : pa / tot >= 0.7 ? 'a' : '';
+  if(push){
+    const T = m[push], ds = push === 'h' ? f.dh : f.da, diff = push === 'h' ? m.gh - m.ga : m.ga - m.gh;
+    L.push(`<b>${esc(T)}</b> fait le siège du but adverse (${plur(ds.shots, 'tir')} dont ${ds.sot} cadré${ds.sot > 1 ? 's' : ''}, ${plur(ds.corners, 'corner')} sur cette période).`);
+    L.push(diff < 0 ? `${esc(T)} est mené et pousse pour revenir : c'est souvent là que le but tombe.` : diff === 0 ? `Score nul : ${esc(T)} veut faire la différence.` : `${esc(T)} mène déjà et cherche le but du break.`);
+  } else {
+    L.push(`Ça attaque <b>des deux côtés</b> : ${esc(m.h)} ${f.dh.shots} tir${f.dh.shots > 1 ? 's' : ''}, ${esc(m.a)} ${f.da.shots} tir${f.da.shots > 1 ? 's' : ''} sur la période. Match ouvert, défenses exposées.`);
+  }
+  if(m.gh + m.ga > f.goals) L.push('⚽ Un but vient de tomber pendant ce temps fort.');
+  if(st){
+    const S2 = k => st.home[k] + st.away[k];
+    let t = `Sur tout le match : ${plur(S2('shots'), 'tir')} dont ${S2('sot')} cadré${S2('sot') > 1 ? 's' : ''}, ${plur(S2('corners'), 'corner')}`;
+    if(S2('xg') > 0) t += `, ${S2('xg').toFixed(2).replace('.', ',')} xG (${st.home.xg.toFixed(1).replace('.', ',')} – ${st.away.xg.toFixed(1).replace('.', ',')})`;
+    if(st.home.poss && st.away.poss) t += `, possession ${Math.round(st.home.poss)} % – ${Math.round(st.away.poss)} %`;
+    L.push(t + '.');
+  }
+  if(m.min >= 75) L.push('Fin de match : les équipes prennent plus de risques, les espaces s’ouvrent.');
+  else if(m.min <= 20) L.push('Début de match très intense, à suivre de près.');
+  L.push(`Selon le modèle : <b>${m.mod.p10} %</b> de but dans les 10 min, ${m.mod.p20} % dans les 20 min.`);
+  return `<div class="fire-box"><div class="fire-h">🔥 Pourquoi c'est chaud</div>${L.map(x => `<p>${x}</p>`).join('')}</div>`;
 }
 
 /* ---------- dessin ---------- */
@@ -741,7 +788,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v31${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v32${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
@@ -753,7 +800,7 @@ function liveView(){
   if(ui.filter && !cnt[ui.filter]) ui.filter = '';
   h += `<div class="chips"><button class="chip ${!ui.filter?'on':''}" data-lg="" onclick="ui.filter=this.dataset.lg;render()">Tous<small>${vis.length}</small></button>${lgs.map(l => `<button class="chip ${ui.filter===l?'on':''}" data-lg="${esc(l)}" onclick="ui.filter=this.dataset.lg;render()">${esc(LEAGUE(l).n)}<small>${cnt[l]}</small></button>`).join('')}</div>`;
   if(ui.error) h += `<div class="err">${esc(ui.error)}</div>`;
-  const list = vis.filter(m => !ui.filter || m.lg === ui.filter).sort((a, b) => b.mod.hot - a.mod.hot);
+  const list = vis.filter(m => !ui.filter || m.lg === ui.filter).sort((a, b) => (fireOn(b) - fireOn(a)) || (fireOn(a) && fireOn(b) ? FIRE[b.id].score - FIRE[a.id].score : 0) || b.mod.hot - a.mod.hot);
   const back = nHid ? `<button class="btn ghost" onclick="unhideAll()">Réafficher les ${nHid} match${nHid > 1 ? 's' : ''} retiré${nHid > 1 ? 's' : ''}</button>` : '';
   if(!list.length){
     const up = ui.upcoming.map(u => `<div class="hist"><span class="when">${new Date(u.date).toLocaleDateString('fr-FR', {weekday:'short'})}<br>${new Date(u.date).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})}</span><div class="what">${esc(u.h)}${rk(u.lg, u.hid)} – ${esc(u.a)}${rk(u.lg, u.aid)}<small>${esc(u.lgName)} · ${esc(LEAGUE(u.lg).c)}</small></div></div>`).join('');
@@ -767,7 +814,8 @@ function liveView(){
     const st = STATS[m.id] && STATS[m.id].s;
     const tags = st ? `<span class="tag">${st.home.sot + st.away.sot} tirs cadrés</span><span class="tag">${st.home.shots + st.away.shots} tirs</span><span class="tag">${st.home.corners + st.away.corners} corners</span>` : `<span class="tag">stats pas encore publiées</span>`;
     const H = standOf(m.lg, m.hid), A = standOf(m.lg, m.aid);
-    h += `<div class="hero${m.mod.idx >= S.threshold && m.status !== 'HT' ? ' red' : ''}" style="margin-bottom:12px" role="button" tabindex="0" onclick="openM('${m.id}')"><span class="x" role="button" aria-label="Retirer ce match" onclick="hideM(event,'${m.id}')">✕</span><div class="eyebrow">N°${i + 1}${i === 0 ? ' en ce moment' : ''}${m.mod.idx >= S.threshold && m.status !== 'HT' ? ' · chaud' : ''}</div>
+    const fire = fireOn(m);
+    h += `<div class="hero${fire ? ' red fire' : m.mod.idx >= S.threshold && m.status !== 'HT' ? ' red' : ''}" style="margin-bottom:12px" role="button" tabindex="0" onclick="openM('${m.id}')"><span class="x" role="button" aria-label="Retirer ce match" onclick="hideM(event,'${m.id}')">✕</span><div class="eyebrow">${fire ? '🔥 EN FEU · ' : ''}N°${i + 1}${i === 0 ? ' en ce moment' : ''}${!fire && m.mod.idx >= S.threshold && m.status !== 'HT' ? ' · chaud' : ''}</div>
     <div class="hero-row">${ring(m.mod.idx, 96, 9)}<div class="hero-teams"><div class="t">${esc(m.h)} – ${esc(m.a)}</div>
     <div class="bigline"><span class="bigmin">${m.status==='HT'?'MT':m.min+'′'}</span><span class="bigsc">${m.gh} - ${m.ga}</span></div>
     ${goalsLine(m)}
@@ -776,7 +824,7 @@ function liveView(){
     <div class="hero-foot"><div class="kpi"><b class="num">${m.mod.p10} %</b><span>but dans 10 min</span></div>
     <div class="kpi"><b class="num">${m.mod.p20} %</b><span>but dans 20 min</span></div>
     <div class="kpi"><b class="num" style="color:var(--gain)">${fo(bookOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</b><span>cote estimée « plus de ${m.gh + m.ga},5 buts »</span></div></div>
-    <div class="tags" style="margin-top:10px">${tags}</div></div>`;
+    <div class="tags" style="margin-top:10px">${tags}</div>${fire ? fireAnalysis(m) : ''}</div>`;
   });
   return h + `</div>` + (back ? `<div style="margin-top:14px">${back}</div>` : '');
 }
@@ -833,6 +881,7 @@ function detailView(){
   } else {
     h += `<div class="box"><h3>Stats du match</h3><p class="note">Le flux n'a pas encore publié les stats de ce match. Elles apparaîtront à une prochaine actualisation.</p></div>`;
   }
+  if(fireOn(m)) h += fireAnalysis(m);
   if(m.events.length) h += `<div class="box"><h3>Faits du match</h3>${m.events.map(e => `<div class="ev"><span class="t">${esc(e.t)}′</span><span>${e.type==='Goal'?'⚽':'🟨'} ${esc(e.p || '')} <span style="color:var(--dim)">(${esc(e.tm || '')})</span></span></div>`).join('')}</div>`;
   const q = encodeURIComponent('\\ site:flashscore.fr ' + (m.hfull || m.h) + ' ' + (m.afull || m.a));
   h += `<div class="books" style="grid-template-columns:1fr 1fr">
