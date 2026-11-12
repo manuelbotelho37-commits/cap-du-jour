@@ -213,6 +213,7 @@ nav.tabs svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1
 .bigsc{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1;color:var(--ink);letter-spacing:.02em}
 .goals{display:flex;flex-wrap:wrap;gap:6px 12px;margin:2px 0 4px;font-size:.92rem;color:var(--ink)}
 .goals b{color:var(--gold);font-family:var(--mono)}
+.goals b.scorer{color:var(--ink);font-family:inherit}
 .small-btn{border:1.5px solid var(--line);background:var(--panel2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:.85rem;color:var(--ink)}
 </style>
 
@@ -316,6 +317,26 @@ async function load365Stats(list){
     const side = cid => ({sot:v(cid, /on target|cadr/i), shots:v(cid, /^(total )?shots$|total shots|tirs$/i), corners:v(cid, /corner/i), poss:v(cid, /possession/i), xg:v(cid, /expected goals|xg/i), fouls:v(cid, /foul/i)});
     const hs = side(m.hid.slice(2)), as = side(m.aid.slice(2));
     if(hs.shots + as.shots + hs.sot + as.sot + hs.corners + as.corners + hs.poss > 0) STATS[m.id] = {at:Date.now(), s:{home:hs, away:as}};
+  });
+}
+/* buteurs 365Scores : fiche du match (events + members), lue seulement quand il manque des noms */
+const SCORERS = {};
+function find365Game(o, d){
+  if(!o || typeof o !== 'object' || d > 4) return null;
+  if(Array.isArray(o.events) && Array.isArray(o.members)) return o;
+  for(const k in o){ const r = find365Game(o[k], (d || 0) + 1); if(r) return r; }
+  return null;
+}
+async function load365Scorers(list){
+  const todo = list.filter(m => m.src === 's3' && m.gh + m.ga > 0).filter(m => { const c = SCORERS[m.id]; return !c || c.n !== m.gh + m.ga || (!c.ok && Date.now() - c.at > 3 * 60e3); }).slice(0, 12);
+  await pool(todo, 3, async m => {
+    const j = await getJSON('https://webws.365scores.com/web/game/?appTypeId=5&langId=1&timezoneName=Europe/Paris&gameId=' + m.id.slice(2));
+    const g = find365Game(j, 0); if(!g) { SCORERS[m.id] = {n:m.gh + m.ga, at:Date.now(), ok:false, list:[]}; return; }
+    const names = {}; g.members.forEach(p => { if(p && p.id != null) names[p.id] = p.shortName || p.name; });
+    const hid = m.hid.slice(2);
+    const l = g.events.filter(e => e && /goal|but/i.test((e.eventType && e.eventType.name) || e.name || '') && !/miss|cancel|disallow|annul/i.test((e.eventType && (e.eventType.name + ' ' + (e.eventType.subTypeName || ''))) || ''))
+      .map(e => ({min:Math.round(+e.gameTime || 0) || (e.gameTimeDisplay || '').replace(/'/g, ''), team:String(e.competitorId) === hid ? m.h : m.a, p:names[e.playerId] || ''}));
+    SCORERS[m.id] = {n:m.gh + m.ga, at:Date.now(), ok:l.length === m.gh + m.ga, list:l};
   });
 }
 async function worldMatches(){
@@ -551,7 +572,7 @@ async function refresh(){
       if(full || !ui.upcoming.length) ui.upcoming = next.filter(u => isFav(u.lg)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12);
       await loadStandings([...new Set(live.filter(m => !S.hidden[m.id]).map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))].slice(0, 25));
     }
-    if(!S.demo){ try{ await load365Stats(LIVE.filter(m => !S.hidden[m.id])); }catch(e){} }
+    if(!S.demo){ try{ await load365Stats(LIVE.filter(m => !S.hidden[m.id])); }catch(e){} try{ await load365Scorers(LIVE.filter(m => !S.hidden[m.id])); }catch(e){} }
     LIVE.forEach(m => m.mod = model(m));
     LIVE.forEach(m => {
       const o = bookOdds(m.mod.pEnd), h = ODDS[m.id] = ODDS[m.id] || [];
@@ -611,13 +632,16 @@ function trackGoals(prev){
     const g = GOALS[m.id] = GOALS[m.id] || {at:Date.now(), list:[]};
     const espn = (m.events || []).filter(e => e.type === 'Goal');
     if(espn.length) g.list = espn.map(e => ({min:parseInt(e.t, 10) || e.t, team:e.tm, p:e.p}));
+    else if(SCORERS[m.id] && SCORERS[m.id].list.length >= g.list.length) g.list = SCORERS[m.id].list.slice();
     const p = prev[m.id]; if(!p) return;
     [['h', 'gh'], ['a', 'ga']].forEach(([t, k]) => {
       for(let n = p[k]; n < m[k]; n++){
-        if(!espn.length) g.list.push({min:m.min, team:m[t]});
+        const src = espn.length ? espn.map(e => ({team:e.tm, p:e.p})) : ((SCORERS[m.id] && SCORERS[m.id].list) || []);
+        const who = (src.filter(e => e.team === m[t] && e.p).pop() || {}).p;
+        if(!espn.length && !(SCORERS[m.id] && SCORERS[m.id].list.length >= m.gh + m.ga)) g.list.push({min:m.min, team:m[t], p:who});
         const sc = m.gh + ' - ' + m.ga;
-        sendNote('⚽ BUT ! ' + m.h + ' ' + sc + ' ' + m.a, m[t] + ' marque à la ' + m.min + 'e minute · ' + m.lgName, 'goal-' + m.id + '-' + m.gh + '-' + m.ga);
-        toast('⚽ But à la ' + m.min + 'e : ' + m[t]);
+        if(!S.hidden[m.id]) sendNote('⚽ BUT ! ' + m.h + ' ' + sc + ' ' + m.a, (who ? who + ' (' + m[t] + ')' : m[t]) + ' marque à la ' + m.min + 'e minute · ' + m.lgName, 'goal-' + m.id + '-' + m.gh + '-' + m.ga);
+        if(!S.hidden[m.id]) toast('⚽ But à la ' + m.min + 'e : ' + (who ? who + ' (' + m[t] + ')' : m[t]));
       }
     });
     g.at = Date.now();
@@ -628,7 +652,7 @@ function goalsLine(m){
   const l = (GOALS[m.id] && GOALS[m.id].list) || [];
   if(!l.length) return (m.gh + m.ga) ? '<div class="goals">⚽ buts marqués avant l’ouverture de l’appli</div>' : '';
   const miss = m.gh + m.ga - l.length;
-  return `<div class="goals">${l.map(x => `<span>⚽ <b>${esc(x.min)}′</b> ${esc(x.team || '')}</span>`).join('')}${miss > 0 ? `<span style="color:var(--dim)">+ ${miss} but${miss > 1 ? 's' : ''} avant l’ouverture</span>` : ''}</div>`;
+  return `<div class="goals">${l.map(x => `<span>⚽ <b>${esc(x.min)}′</b> ${x.p ? '<b class="scorer">' + esc(x.p) + '</b> ' : ''}${esc(x.p ? '(' + (x.team || '') + ')' : (x.team || ''))}</span>`).join('')}${miss > 0 ? `<span style="color:var(--dim)">+ ${miss} but${miss > 1 ? 's' : ''} avant l’ouverture</span>` : ''}</div>`;
 }
 const HIST = {}, PRESS = {};
 function trackPressure(){
@@ -706,7 +730,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v29${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v30${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
