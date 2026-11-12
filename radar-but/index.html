@@ -712,12 +712,18 @@ function goalsLine(m){
   const miss = m.gh + m.ga - l.length;
   return `<div class="goals">${l.map(x => `<span>⚽ <b>${esc(x.min)}′</b> ${x.p ? '<b class="scorer">' + esc(x.p) + '</b> ' : ''}${esc(x.p ? '(' + (x.team || '') + ')' : (x.team || ''))}</span>`).join('')}${miss > 0 ? `<span style="color:var(--dim)">+ ${miss} but${miss > 1 ? 's' : ''} avant l’ouverture</span>` : ''}</div>`;
 }
-const HIST = {}, PRESS = {};
+const HIST = (() => { try{ const h = JSON.parse(localStorage.getItem('radarbut_hist') || '{}') || {}; for(const k in h) if(!Array.isArray(h[k]) || !h[k].length || !h[k][0].h) delete h[k]; return h; }catch(e){ return {}; } })();
+const PRESS = (() => { try{ return JSON.parse(localStorage.getItem('radarbut_press') || '{}') || {}; }catch(e){ return {}; } })();
 /* match « en feu » : beaucoup d'occasions ces dernières minutes → tout en haut + analyse */
-const FIRE = {};
+/* gardé en mémoire du téléphone : un rechargement de l'appli (mise à jour) ou une 2e fenêtre ne fait plus perdre l'état « en feu » */
+let FIRE = {}; try{ FIRE = JSON.parse(localStorage.getItem('radarbut_fire') || '{}') || {}; }catch(e){}
+function saveFire(){ for(const k in FIRE) if(Date.now() - FIRE[k].at > 30 * 60e3) delete FIRE[k]; try{ localStorage.setItem('radarbut_fire', JSON.stringify(FIRE)); localStorage.setItem('radarbut_hist', JSON.stringify(HIST)); }catch(e){} }
+function loadFire(){ try{ const f = JSON.parse(localStorage.getItem('radarbut_fire') || '{}') || {}; for(const k in f) if(!FIRE[k] || f[k].at > FIRE[k].at) FIRE[k] = f[k]; }catch(e){} }
+window.addEventListener('storage', e => { if(e.key === 'radarbut_fire'){ loadFire(); render(); } });
 const FIRE_MS = 8 * 60e3;
 const fireOn = m => !!FIRE[m.id] && Date.now() - FIRE[m.id].at < FIRE_MS && m.status !== 'HT';
 function trackPressure(){
+  loadFire();
   LIVE.forEach(m => {
     const st = STATS[m.id] && STATS[m.id].s; if(!st || m.status === 'HT') return;
     const side = x => ({sot:x.sot || 0, shots:x.shots || 0, corners:x.corners || 0, xg:x.xg || 0});
@@ -741,6 +747,7 @@ function trackPressure(){
     sendNote('🔥 ' + m.h + ' – ' + m.a, 'Match en feu : ' + why.join(', ') + ' en ' + mins + ' min · ' + m.gh + '-' + m.ga + ' à la ' + m.min + 'e · ' + m.mod.p10 + ' % de but dans 10 min', 'press-' + m.id);
     toast('🔥 En feu : ' + m.h + ' – ' + m.a);
   });
+  saveFire(); try{ localStorage.setItem('radarbut_press', JSON.stringify(PRESS)); }catch(e){}
 }
 const plur = (n, w) => n + ' ' + w + (Math.abs(n) > 1 ? 's' : '');
 function fireAnalysis(m){
@@ -831,7 +838,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v37${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v38${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
