@@ -376,15 +376,25 @@ function load(){ try{ return JSON.parse(localStorage.getItem(STORE) || 'null'); 
 let S = Object.assign({every:1, threshold:75, notify:false, alerts:[], demo:false}, load() || {});
 if(!S.v2){ S.every = 1; S.v2 = true; }
 S.hidden = S.hidden || {};   /* matchs masqués avec la croix : {id: date} */
-for(const k in S.hidden) if(Date.now() - S.hidden[k] > 12 * 3600e3) delete S.hidden[k];
-const shown = () => LIVE.filter(m => !S.hidden[m.id]);
+S.hiddenT = S.hiddenT || {};  /* mêmes matchs, repérés par les noms d'équipes (si la source change d'identifiant) */
+function pruneHidden(){ [S.hidden, S.hiddenT].forEach(o => { for(const k in o) if(Date.now() - o[k] > 12 * 3600e3) delete o[k]; }); }
+pruneHidden();
+const tkey = m => norm(m.hfull || m.h) + '|' + norm(m.afull || m.a);
+const isHid = m => !!(S.hidden[m.id] || S.hiddenT[tkey(m)]);
+/* l'appli peut tourner à la fois dans Chrome et en appli installée : on relit toujours la liste des matchs retirés */
+function syncHidden(){ try{ const x = JSON.parse(localStorage.getItem(STORE) || 'null'); if(x){ S.hidden = x.hidden || {}; S.hiddenT = x.hiddenT || {}; pruneHidden(); } }catch(e){} }
+window.addEventListener('storage', e => { if(e.key === STORE){ syncHidden(); render(); } });
+const shown = () => LIVE.filter(m => !isHid(m));
 function hideM(ev, id){
   ev.stopPropagation();
-  S.hidden[id] = Date.now(); save();
+  syncHidden();
+  S.hidden[id] = Date.now();
+  const m = LIVE.find(x => x.id === id); if(m) S.hiddenT[tkey(m)] = Date.now();
+  save();
   if(ui.match === id) ui.match = null;
-  toast('Match retiré de la liste'); render();
+  toast('Match retiré : plus aucune alerte pour lui'); render();
 }
-function unhideAll(){ S.hidden = {}; save(); toast('Tous les matchs sont de retour'); render(); }
+function unhideAll(){ S.hidden = {}; S.hiddenT = {}; save(); toast('Tous les matchs sont de retour'); render(); }
 function save(){ try{ localStorage.setItem(STORE, JSON.stringify(S)); }catch(e){} }
 const today = () => new Date().toISOString().slice(0,10);
 
@@ -522,6 +532,7 @@ function standOf(lg, teamId){ return STAND[lg] && STAND[lg].t[teamId]; }
 function ord(r){ return r === 1 ? '1er' : r + 'e'; }
 function rk(lg, teamId){ const x = standOf(lg, teamId); return x && x.r ? `<span class="rank">${ord(x.r)} · ${x.pts} pts</span>` : ''; }
 async function refresh(){
+  syncHidden();
   if(ui.loading) return;
   ui.loading = true; ui.error = ''; render();
   try{
@@ -570,9 +581,9 @@ async function refresh(){
       if(!lsl && !favOk && fails === list.length){ ui.fullAt = 0; const st = (res.find(r => r.reason && r.reason.status) || {}).reason; throw new Error('Impossible de lire le flux des matchs' + (st ? ' (ESPN ' + st.status + ', LiveScore ' + (ui.ls || '?') + ')' : '') + '. Nouvel essai dans une minute.'); }
       LIVE = live;
       if(full || !ui.upcoming.length) ui.upcoming = next.filter(u => isFav(u.lg)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12);
-      await loadStandings([...new Set(live.filter(m => !S.hidden[m.id]).map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))].slice(0, 25));
+      await loadStandings([...new Set(live.filter(m => !isHid(m)).map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))].slice(0, 25));
     }
-    if(!S.demo){ try{ await load365Stats(LIVE.filter(m => !S.hidden[m.id])); }catch(e){} try{ await load365Scorers(LIVE.filter(m => !S.hidden[m.id])); }catch(e){} }
+    if(!S.demo){ try{ await load365Stats(LIVE.filter(m => !isHid(m))); }catch(e){} try{ await load365Scorers(LIVE.filter(m => !isHid(m))); }catch(e){} }
     LIVE.forEach(m => m.mod = model(m));
     LIVE.forEach(m => {
       const o = bookOdds(m.mod.pEnd), h = ODDS[m.id] = ODDS[m.id] || [];
@@ -602,7 +613,7 @@ function trackAlerts(prev){
   });
   /* nouvelles alertes */
   LIVE.forEach(m => {
-    if(S.hidden[m.id] || m.mod.idx < S.threshold || m.status === 'HT' || m.min > 85) return;
+    if(isHid(m) || m.mod.idx < S.threshold || m.status === 'HT' || m.min > 85) return;
     if(S.alerts.some(a => a.id === m.id && !a.res)) return;
     S.alerts.unshift({id:m.id, at:Date.now(), match:m.h + ' – ' + m.a, lg:m.lgName + ' (' + LEAGUE(m.lg).c + ')', min:m.min, score:m.gh + '-' + m.ga, goals:m.gh + m.ga, idx:m.mod.idx, p:m.mod.pEnd, res:null, demo:S.demo});
     notify(m);
@@ -640,8 +651,8 @@ function trackGoals(prev){
         const who = (src.filter(e => e.team === m[t] && e.p).pop() || {}).p;
         if(!espn.length && !(SCORERS[m.id] && SCORERS[m.id].list.length >= m.gh + m.ga)) g.list.push({min:m.min, team:m[t], p:who});
         const sc = m.gh + ' - ' + m.ga;
-        if(!S.hidden[m.id]) sendNote('⚽ BUT ! ' + m.h + ' ' + sc + ' ' + m.a, (who ? who + ' (' + m[t] + ')' : m[t]) + ' marque à la ' + m.min + 'e minute · ' + m.lgName, 'goal-' + m.id + '-' + m.gh + '-' + m.ga);
-        if(!S.hidden[m.id]) toast('⚽ But à la ' + m.min + 'e : ' + (who ? who + ' (' + m[t] + ')' : m[t]));
+        if(!isHid(m)) sendNote('⚽ BUT ! ' + m.h + ' ' + sc + ' ' + m.a, (who ? who + ' (' + m[t] + ')' : m[t]) + ' marque à la ' + m.min + 'e minute · ' + m.lgName, 'goal-' + m.id + '-' + m.gh + '-' + m.ga);
+        if(!isHid(m)) toast('⚽ But à la ' + m.min + 'e : ' + (who ? who + ' (' + m[t] + ')' : m[t]));
       }
     });
     g.at = Date.now();
@@ -657,7 +668,7 @@ function goalsLine(m){
 const HIST = {}, PRESS = {};
 function trackPressure(){
   LIVE.forEach(m => {
-    const st = STATS[m.id] && STATS[m.id].s; if(!st || S.hidden[m.id] || m.status === 'HT') return;
+    const st = STATS[m.id] && STATS[m.id].s; if(!st || isHid(m) || m.status === 'HT') return;
     const now = {t:Date.now(), min:m.min, goals:m.gh + m.ga, sot:st.home.sot + st.away.sot, shots:st.home.shots + st.away.shots, corners:st.home.corners + st.away.corners, xg:(st.home.xg || 0) + (st.away.xg || 0)};
     const h = HIST[m.id] = (HIST[m.id] || []).filter(x => now.t - x.t < 6 * 60e3 && x.goals === now.goals);
     const old = h[0]; h.push(now);
@@ -730,7 +741,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v30${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v31${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
