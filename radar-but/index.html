@@ -344,6 +344,41 @@ async function load365Scorers(list){
     SCORERS[m.id] = {n:m.gh + m.ga, at:Date.now(), ok:l.length === m.gh + m.ga, list:l};
   });
 }
+/* vraies cotes bookmaker publiées par 365Scores (essai) : on cherche « plus/moins de X,5 buts » dans la fiche du match */
+const REAL = {}; let BETS_BAD = false;   /* {id: {at, lines:{'2.5':{over, under, book}}, diag}} */
+function dec(r){ if(r == null) return null; if(typeof r === 'number') return r > 1 ? r : null; if(typeof r === 'string'){ const v = parseFloat(r.replace(',', '.')); return v > 1 ? v : null; } return dec(r.decimal != null ? r.decimal : r.rate != null ? r.rate : r.odds != null ? r.odds : r.value); }
+function walk365Odds(o, out, ctx, d){
+  if(!o || typeof o !== 'object' || d > 9) return;
+  if(Array.isArray(o)){ o.forEach(x => walk365Odds(x, out, ctx, d + 1)); return; }
+  const tname = [o.name, o.title, o.lineType && (o.lineType.name || o.lineType.title), o.type && o.type.name].filter(Boolean).join(' ');
+  const c = Object.assign({}, ctx);
+  if(tname) c.t = (ctx.t || '') + ' ' + tname;
+  const num = [o.internalOption, o.points, o.line, o.handicap, o.total, o.p, o.parameter, o.lineValue].map(x => parseFloat(String(x == null ? '' : x).replace(',', '.'))).find(x => isFinite(x) && x % 1 === 0.5);
+  if(num != null) c.n = num;
+  if(o.bookmakerId != null || o.bookmaker) c.book = (o.bookmaker && (o.bookmaker.name || o.bookmaker)) || o.bookmakerId;
+  const opts = o.options || o.outcomes || o.selections;
+  if(Array.isArray(opts) && opts.length === 2 && /total|goal|but|over|under|plus|moins/i.test(c.t || '') && !/half|mi-temps|1st|2nd|corner|card|team|équipe|asian/i.test(c.t || '')){
+    let n = c.n; const nm = x => String(x.name || x.title || x.num || '');
+    opts.forEach(x => { const mm = /(\d+[.,]5)/.exec(nm(x)); if(n == null && mm) n = parseFloat(mm[1].replace(',', '.')); });
+    const ov = opts.find(x => /over|plus|^o\b|^1$/i.test(nm(x))) || opts[0], un = opts.find(x => x !== ov);
+    const a = dec(ov.rate || ov.odds || ov.price || ov), b = dec(un.rate || un.odds || un.price || un);
+    if(n != null && a && b && !out[n]) out[n] = {over:a, under:b, book:c.book};
+  }
+  for(const k in o) if(o[k] && typeof o[k] === 'object' && k !== 'options') walk365Odds(o[k], out, c, d + 1);
+}
+async function load365Odds(list){
+  const todo = list.filter(m => m.src === 's3').filter(m => !REAL[m.id] || Date.now() - REAL[m.id].at > 90e3).slice(0, 10);
+  await pool(todo, 3, async m => {
+    const gid = m.id.slice(2), lines = {}, diag = [];
+    for(const u of [BETS_BAD ? null : 'https://webws.365scores.com/web/bets/lines/?appTypeId=5&langId=1&timezoneName=Europe/Paris&games=' + gid, 'https://webws.365scores.com/web/game/?appTypeId=5&langId=1&timezoneName=Europe/Paris&gameId=' + gid]){
+      if(!u) continue;
+      try{ const j = await getJSON(u); walk365Odds(j, lines, {}, 0); diag.push((u.includes('bets') ? 'bets' : 'game') + ' ok'); if(Object.keys(lines).length) break; }
+      catch(e){ diag.push((u.includes('bets') ? 'bets' : 'game') + ' ' + (e.status || 'x')); if(u.includes('bets') && (e.status === 404 || e.status === 400)) BETS_BAD = true; }
+    }
+    REAL[m.id] = {at:Date.now(), lines, diag:diag.join(', ')};
+  });
+}
+const realOver = m => { const r = REAL[m.id] && REAL[m.id].lines[m.gh + m.ga + 0.5]; return r ? r : null; };
 async function worldMatches(){
   let order = [['365Scores', S365, s365Matches], ['Sofascore', SOFA, sofaMatches], ['LiveScore', LSAPI, lsMatches]];
   if(ui.world){ const k = order.findIndex(o => o[0] === ui.world); if(k > 0) order.unshift(order.splice(k, 1)[0]); }
@@ -595,7 +630,7 @@ async function refresh(){
       if(full || !ui.upcoming.length) ui.upcoming = next.filter(u => isFav(u.lg)).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 12);
       await loadStandings([...new Set(live.filter(m => !isHid(m)).map(m => m.lg).concat(ui.upcoming.map(u => u.lg)))].slice(0, 25));
     }
-    if(!S.demo){ try{ await load365Stats(LIVE.filter(m => !isHid(m))); }catch(e){} try{ await load365Scorers(LIVE.filter(m => !isHid(m))); }catch(e){} }
+    if(!S.demo){ try{ await load365Stats(LIVE.filter(m => !isHid(m))); }catch(e){} try{ await load365Scorers(LIVE.filter(m => !isHid(m))); }catch(e){} try{ await load365Odds(LIVE.filter(m => !isHid(m))); }catch(e){} }
     LIVE.forEach(m => m.mod = model(m));
     LIVE.forEach(m => {
       const o = bookOdds(m.mod.pEnd), h = ODDS[m.id] = ODDS[m.id] || [];
@@ -796,7 +831,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v35${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v36${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
@@ -831,7 +866,7 @@ function liveView(){
     ${H && A ? `<div class="m">${esc(m.h)} ${ord(H.r)} · ${esc(m.a)} ${ord(A.r)} au classement</div>` : ''}</div></div>
     <div class="hero-foot"><div class="kpi"><b class="num">${m.mod.p10} %</b><span>but dans 10 min</span></div>
     <div class="kpi"><b class="num">${m.mod.p20} %</b><span>but dans 20 min</span></div>
-    <div class="kpi"><b class="num" style="color:var(--gain)">${fo(bookOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</b><span>cote estimée « plus de ${m.gh + m.ga},5 buts »</span></div></div>
+    ${realOver(m) ? `<div class="kpi"><b class="num" style="color:var(--gain)">${fo(realOver(m).over)}</b><span>vraie cote « plus de ${m.gh + m.ga},5 buts »${realOver(m).book && isNaN(realOver(m).book) ? ' · ' + esc(realOver(m).book) : ''}</span></div>` : `<div class="kpi"><b class="num" style="color:var(--gain)">${fo(bookOdds(m.mod.pEnd))} ${oddsTrend(m.id)}</b><span>cote estimée « plus de ${m.gh + m.ga},5 buts »</span></div>`}</div>
     <div class="tags" style="margin-top:10px">${tags}</div>${fire ? fireAnalysis(m) : ''}</div>`;
   });
   return h + `</div>` + (back ? `<div style="margin-top:14px">${back}</div>` : '');
@@ -866,6 +901,7 @@ function detailView(){
       <div><b class="num">${fo(bookOdds(mod.p20))}</b><span>but dans 20 min</span></div>
       <div><b class="num">${fo(bookOdds(mod.p10))}</b><span>but dans 10 min</span></div>
     </div>
+    ${realOver(m) ? `<p class="note" style="color:var(--ink)"><b>Vraie cote bookmaker</b> (via 365Scores${realOver(m).book && isNaN(realOver(m).book) ? ', ' + esc(realOver(m).book) : ''}) : plus de ${m.gh + m.ga},5 à <b>${fo(realOver(m).over)}</b>, moins de ${m.gh + m.ga},5 à <b>${fo(realOver(m).under)}</b>. Probabilité sans marge : ${Math.round(100 / realOver(m).over / (1 / realOver(m).over + 1 / realOver(m).under))} % (modèle : ${mod.pEnd} %).</p>` : `<p class="note">Vraies cotes : pas trouvées pour ce match${REAL[m.id] ? ' (' + esc(REAL[m.id].diag) + ')' : ''}.</p>`}
     ${oddsChart(m.id)}
     <div class="field"><label for="seen">Meilleure cote vue chez un bookmaker, pari « Plus de ${m.gh + m.ga},5 buts »</label>
       <input class="in" id="seen" inputmode="decimal" placeholder="ex. 1,60" value="${esc((SEEN[m.id] || ''))}" oninput="SEEN['${m.id}']=this.value;verdict('${m.id}')"></div>
