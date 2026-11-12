@@ -527,7 +527,7 @@ function model(m){
   /* 3. le score */
   const diff = Math.abs(m.gh - m.ga);
   if(diff === 1 && min >= 60){ f *= 1.06; why.push(['Un but d’écart : l’équipe menée attaque', 5]); }
-  else if(diff >= 2){ f *= 0.92; why.push(['Écart de ' + diff + ' buts : le match peut se calmer', -5]); }
+  else if(diff >= 2){ f *= 0.78; why.push(['Écart de ' + diff + ' buts : le match se calme souvent (l’équipe qui mène gère)', -10]); }
   else if(diff === 0 && min >= 75){ f *= 0.96; why.push(['Nul en fin de match : certaines équipes se contentent du point', -3]); }
   if(min >= 75) why.push(['Fin de match : le rythme des buts est le plus élevé', 5]);
   if(m.status === 'HT') why.push(['Mi-temps en cours', 0]);
@@ -778,8 +778,8 @@ function fireAnalysis(m){
 /* ---------- dessin ---------- */
 /* cote juste = 1 / probabilité : la cote à partir de laquelle le pari devient intéressant selon le modèle */
 function fairOdds(p){ return p > 0 && p < 100 ? Math.round(100 / p * 100) / 100 : null; }
-/* marge façon Winamax en live (~15 % sur la probabilité, calée sur Italie–France 1-1 : MT 1,09/4,50 et 51e 1,13/3,70) */
-function bookOdds(p){ if(!(p > 0 && p < 100)) return null; const pb = Math.min(97, p * 1.15); return Math.max(1.01, Math.round(100 / pb * 100) / 100); }
+/* marge façon Winamax en live (+11 points de probabilité sur « plus de », calé sur 3 relevés Winamax : Italie–France MT 1,09/4,50, 51e 1,13/3,70, Albanie–Finlande 2-0 59e 1,41/2,10) */
+function bookOdds(p){ if(!(p > 0 && p < 100)) return null; const pb = Math.min(97, p + 11); return Math.max(1.01, Math.round(100 / pb * 100) / 100); }
 function fo(o){ return o ? o.toFixed(2).replace('.', ',') : '–'; }
 const SEEN = {};
 function verdictHTML(m){
@@ -831,7 +831,7 @@ function header(sub){
 }
 function statusLine(){
   const t = ui.lastAt ? ui.lastAt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '–';
-  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v36${ui.world ? ' · ' + ui.world : ''}</span></div>`;
+  return `<div class="status"><span>${ui.loading ? 'Mise à jour…' : 'Mis à jour à <b>' + t + '</b>'}${S.demo ? ' · <b>mode démo</b>' : ''}</span><span>Toutes les <b>${S.every} min</b> · v37${ui.world ? ' · ' + ui.world : ''}</span></div>`;
 }
 
 /* ---------- écrans ---------- */
