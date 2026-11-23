@@ -145,7 +145,8 @@ button{font-family:inherit;cursor:pointer}
 .vial::before{content:"";position:absolute;left:18%;right:18%;top:-6%;height:14%;border-radius:20%;background:#c98a4a}
 .metal{inset:1%!important;border-radius:10%;background:linear-gradient(150deg,#f2f6fa,#b9c6d3 50%,#8796a6);box-shadow:inset 0 -.25em 0 #0003,inset 0 .15em 0 #fff,0 2px 2px #0004}
 .metal::before{content:"";position:absolute;inset:12%;background:radial-gradient(circle,#6a7a8a 0 18%,#0000 22%) 0 0/50% 50%;opacity:.8}
-.mud{inset:0!important;background:radial-gradient(circle at 30% 40%,#a88456 0 6%,#0000 7%),radial-gradient(circle at 70% 70%,#a88456 0 5%,#0000 6%),linear-gradient(#a87444,#8a5a30);box-shadow:inset 0 .12em 0 #c9935a}
+.mud{inset:3%!important;border-radius:50%;background:radial-gradient(circle at 50% 50%,#7a4a1e 0 5%,#f0c98a 6% 13%,#d9a464 14% 17%,#f2cf95 18% 27%,#d4a060 28% 31%,#eec58a 32% 42%,#cf9a58 43% 46%,#e8bd80 47% 58%,#6b3e18 60% 66%,#8a5428 67% 100%);box-shadow:inset 0 -.18em 0 #0003,inset 0 .1em 0 #ffffff40,0 3px 3px #0005}
+.mud::after{content:"";position:absolute;left:58%;top:20%;width:6%;height:26%;border-radius:3px;background:#a8703a;transform:rotate(25deg);opacity:.7}
 .timer{inset:6%!important;border-radius:50%;background:radial-gradient(circle at 35% 30%,#6a7488,#2b3040 60%,#151820);box-shadow:inset 0 -.2em 0 #0006,0 2px 3px #0006}
 .timer::before{content:"";position:absolute;right:4%;top:-10%;width:22%;height:22%;border-radius:50%;background:#ffcf2e;box-shadow:0 0 .4em #ff9a1a}
 .timer b{position:absolute;inset:26%;border-radius:30%;background:#fff;color:#c0201a;font-weight:900;font-size:calc(var(--cell)*.26);display:flex;align-items:center;justify-content:center}
@@ -790,15 +791,15 @@ function helpMenu(){
  <p style="font-size:16px;margin:6px 0"><b>Combos :</b> touche un spécial collé à un autre spécial. Fusée + fusée = une ligne et une colonne en croix. Fusée + TNT = 3 lignes et 3 colonnes. TNT + TNT = énorme explosion (9 × 9), presque tout le plateau. Arc-en-ciel + fusée = tous les cubes de sa couleur deviennent des fusées. Arc-en-ciel + TNT = ils deviennent tous des TNT. Arc-en-ciel + arc-en-ciel = tout le plateau.</p>
  ${row('<div class="stone hp1"></div>','<b>Pierre</b> : bloque le passage, casse-la en faisant exploser à côté.')}
  ${row(`<div class="gemst">${GEM}</div>`,'<b>Pierre à diamant</b> : casse-la pour ramasser le diamant.')}
- ${row('<div class="brick hp3"></div>','<b>Brique</b> : plusieurs couches (rouge, orange, jaune).')}
+ ${row('<div class="brick hp3"></div>','<b>Brique</b> : rouge = 3 couches, orange = 2, jaune = la dernière.')}
  ${row('<div class="safe hp2"><i></i></div>','<b>Coffre-fort</b> : 2 coups, il libère un sac d\'argent.')}
  ${row(`<div class="bag">${BAG}</div>`,'<b>Sac d\'argent</b> : fais-le descendre tout en bas pour le ramasser.')}
  ${row('<div class="hive"><i></i></div>','<b>Ruche</b> : chaque coup libère une abeille 🐝.')}
  ${row('<div class="pump hp2"></div>','<b>Citrouille</b> : 1 coup l\'allume, le 2e la ramasse.')}
  ${row('<div class="vial"></div>','<b>Fiole</b> : 1 coup pour la ramasser.')}
  ${row('<div class="metal"></div>','<b>Bloc en métal</b> : seuls les fusées, TNT et arc-en-ciel le cassent.')}
- ${row('<div class="mud" style="border-radius:20%"></div>','<b>Terre</b> : creuse-la en faisant exploser à côté.')}
- ${row('<div class="timer"><b style="font-size:10px">9</b></div>','<b>Bombe à minuterie</b> : désamorce-la avant que le chiffre arrive à 0 !')}
+ ${row('<div class="mud" style="border-radius:20%"></div>','<b>Rondin de bois</b> : casse-le en faisant exploser à côté.')}
+ ${row('<div class="timer"><b style="font-size:10px">9</b></div>','<b>Bombe à minuterie</b> (dans les rondins) : désamorce-la avant que le chiffre arrive à 0 !')}
  <p style="font-size:16px;margin:6px 0">Les obstacles ne bougent pas : les cubes coulent autour, même en biais.</p>
  </div><button class="btn" id="hOk">Compris</button>`);$('hOk').onclick=closeModal}
 function bonusMenu(){
