@@ -473,7 +473,9 @@ function areaSingle(t,r,c){
  if(t.t==='disco'){const col=(t.c!==undefined)?t.c:mostColor();snd('disco');const cs=cubesOf(col);cs.forEach(([a,b])=>{fxBoom(a,b,.7);fxBolt(r,c,a,b)});
   const adj=[];for(const [a,b] of cs)for(const [dr,dc] of N4){const a2=a+dr,b2=b+dc;if(inB(a2,b2)&&isObs(G.grid[a2][b2]))adj.push([a2,b2])}return cs.concat([[r,c]],adj)}
  return[]}
-function runQueue(res){let guard=0;while(res.q.length&&guard++<400){const [r,c]=res.q.shift();const t=G.grid[r][c];if(!t)continue;res.clear.add(K(r,c));hitArea(res,areaSingle(t,r,c))}}
+function runQueue(res){let guard=0;while(res.q.length&&guard++<400){const [r,c]=res.q.shift();const t=G.grid[r][c];if(!t)continue;res.clear.add(K(r,c));const area=areaSingle(t,r,c);hitArea(res,area);
+  if(t.t==='tnt'||t.t==='bomb'){for(const [a,b] of area){if(!inB(a,b))continue;const k=K(a,b);if(res.hits.has(k))res.hits.set(k,res.hits.get(k)+1)}fxSquare(r,c,t.t==='tnt'?3:2)}}}
+function fxSquare(r,c,d){if(FAST)return;const e=document.createElement('div');e.className='fx-boom';e.style.borderRadius='18%';const w=(2*d+1)*CELL;e.style.width=e.style.height=w+'px';e.style.left=((c-d)*CELL)+'px';e.style.top=((r-d)*CELL)+'px';e.style.background='radial-gradient(circle,#fff,#ffd23acc 40%,#ff6a1a88 70%,transparent 85%)';$('fx').appendChild(e);setTimeout(()=>e.remove(),470)}
 
 function goalDec(k,n){const g=G.goals.find(x=>x.k===k);if(!g||g.n<=0||n<=0)return;g.n=Math.max(0,g.n-n);drawGoals(k);updBar()}
 function thr(){const b=(G.goalStart||20)*60+600;return[b,b*1.5,b*2.1]}
