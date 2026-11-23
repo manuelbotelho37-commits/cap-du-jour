@@ -866,6 +866,14 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)save()});
 renderMap();
 if(!S.helpSeen){S.helpSeen=1;save();setTimeout(helpMenu,400)}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+/* mise à jour : l'appli vérifie toute seule s'il y a une nouvelle version */
+const BUILD='1795470296';let updShown=false;
+async function checkUpdate(){if(updShown||location.protocol==='file:')return;try{const r=await fetch('version.txt?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const v=(await r.text()).trim();
+ if(v&&v!==BUILD){updShown=true;const d=document.createElement('button');d.textContent='🔄 Nouvelle version — Mettre à jour';d.style.cssText='position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 70px);transform:translateX(-50%);z-index:300;border:none;border-radius:16px;padding:14px 20px;font-size:18px;font-weight:900;color:#fff;background:linear-gradient(#8ee35a,#4cb52a);box-shadow:inset 0 -5px 0 #2f8a17,0 6px 16px #0006';
+  d.onclick=async()=>{save();try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('cubeboum')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.update()}catch(e){}location.reload()};document.body.appendChild(d)}}catch(e){}}
+window.addEventListener('load',()=>setTimeout(checkUpdate,1500));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});
+setInterval(checkUpdate,60000);
 </script>
 </body>
 </html>
