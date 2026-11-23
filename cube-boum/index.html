@@ -134,9 +134,14 @@ button{font-family:inherit;cursor:pointer}
 .safe::after{content:"";position:absolute;right:6%;top:40%;width:8%;height:20%;border-radius:2px;background:#5a6a7a}
 .gemst{inset:2%!important;border-radius:28% 34% 26% 32%;background:radial-gradient(circle at 30% 28%,#eef2f6,#b3bdc9 55%,#7d8999);box-shadow:inset 0 -.25em 0 #0002,0 2px 2px #0003}
 .gemst svg{position:absolute;inset:14%;width:72%;height:72%;filter:drop-shadow(0 2px 1px #0005)}
-.brick{inset:1%!important;border-radius:9%;background:repeating-linear-gradient(180deg,#0000 0 30%,#0002 30% 34%),linear-gradient(var(--k1),var(--k2));box-shadow:inset 0 -.25em 0 #0003,inset 0 .16em 0 #fff5,0 2px 2px #0004}
-.brick::after{content:"";position:absolute;left:18%;right:18%;top:38%;height:24%;border-radius:30%;background:#00000018;box-shadow:inset 0 .08em 0 #0002,0 .06em 0 #fff3}
-.brick.hp3{--k1:#ff6a5a;--k2:#c4201a}.brick.hp2{--k1:#ffa64a;--k2:#d86a10}.brick.hp1{--k1:#ffe066;--k2:#d9a400}
+.brick{inset:1%!important;border-radius:8%;overflow:hidden;background:
+ linear-gradient(90deg,#0000 calc(50% - .09em),var(--j) calc(50% - .09em) calc(50% + .09em),#0000 0) 0 0/100% 33.4% no-repeat,
+ linear-gradient(90deg,#0000 calc(25% - .09em),var(--j) calc(25% - .09em) calc(25% + .09em),#0000 0,#0000 calc(75% - .09em),var(--j) calc(75% - .09em) calc(75% + .09em),#0000 0) 0 50%/100% 33.4% no-repeat,
+ linear-gradient(90deg,#0000 calc(50% - .09em),var(--j) calc(50% - .09em) calc(50% + .09em),#0000 0) 0 100%/100% 33.4% no-repeat,
+ repeating-linear-gradient(180deg,#0000 0 calc(33.3% - .1em),var(--j) calc(33.3% - .1em) 33.3%),
+ linear-gradient(var(--k1),var(--k2));box-shadow:inset 0 -.22em 0 #0003,inset 0 .14em 0 #fff6,0 2px 2px #0004}
+.brick::after{content:"";position:absolute;left:6%;right:6%;top:4%;height:12%;border-radius:40%;background:linear-gradient(#ffffff70,#0000)}
+.brick.hp3{--k1:#f2604e;--k2:#b81c14;--j:#7a1410}.brick.hp2{--k1:#ffa24a;--k2:#d0640e;--j:#8a3c06}.brick.hp1{--k1:#ffe066;--k2:#d4a000;--j:#8a6400}
 .bag svg{width:100%;height:100%;filter:drop-shadow(0 2px 2px #0006)}
 .pump{inset:3%!important;border-radius:46% 46% 42% 42%;background:radial-gradient(ellipse 22% 48% at 50% 55%,#ffb347,#0000 70%),repeating-linear-gradient(90deg,#f08a1a 0 14%,#ffa23a 14% 24%,#d9700a 24% 28%);box-shadow:inset 0 -.3em 0 #b8560044,inset 0 .2em 0 #fff6,0 2px 2px #0004}
 .pump::before{content:"";position:absolute;left:44%;top:-8%;width:12%;height:20%;border-radius:30%;background:#3f8a2a;box-shadow:.12em .05em 0 -.02em #5fb03a}
@@ -714,9 +719,17 @@ async function win(){
  const coins=5+left;const t=thr();const sc=G.score||0;const stars=sc>=t[2]?3:sc>=t[1]?2:1;
  const L=G.level;
  if(FAST){G.result={win:true,left};return}
- S.stars[L]=Math.max(S.stars[L]||0,stars);S.level=Math.max(S.level,L+1);S.coins+=coins;S.cur=null;S.wins=(S.wins||0)+1;save();
+ S.stars[L]=Math.max(S.stars[L]||0,stars);S.level=Math.max(S.level,L+1);S.coins+=coins;S.cur=null;S.wins=(S.wins||0)+1;
+ const prizes=[];const bk=['hammer','row','col','bucket','paint'];const give=(k,n)=>{S.boost[k]=(S.boost[k]||0)+n;prizes.push({k,n})};
+ for(let i=0;i<stars;i++)give(bk[Math.floor(Math.random()*bk.length)],1);
+ let chest=false;if(S.wins%5===0){chest=true;give('hammer',1);give(bk[1+Math.floor(Math.random()*4)],1);const pk=['rk','bm','dc'][Math.floor(Math.random()*3)];S.pre[pk]=(S.pre[pk]||0)+1;S.coins+=25}
+ save();
+ const agg={};prizes.forEach(x=>agg[x.k]=(agg[x.k]||0)+x.n);
+ const prizeHtml=Object.entries(agg).map(([k,n])=>`<div style="display:inline-flex;flex-direction:column;align-items:center;margin:4px 6px"><div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(#7fdc5a,#46ad2c);display:flex;align-items:center;justify-content:center">${BOOSTERS.find(b=>b.k===k).ic.replace('<svg','<svg style="width:76%;height:76%"')}</div><b>+${n}</b></div>`).join('');
  modal(`<h2>Niveau ${L} réussi !</h2><div class="stars">${[1,2,3].map(i=>`<span class="${i<=stars?'':'off'}">⭐</span>`).join('')}</div>
- <p>Score : <b>${(G.score||0).toLocaleString('fr-FR')}</b><br>+${coins} pièces <span class="coin" style="vertical-align:middle"></span></p>
+ <p>Score : <b>${(G.score||0).toLocaleString('fr-FR')}</b><br>+${coins+(chest?25:0)} pièces <span class="coin" style="vertical-align:middle"></span></p>
+ <p style="margin:4px 0 0;font-weight:800">Tu gagnes :</p><div>${prizeHtml}</div>
+ ${chest?'<p style="color:#c74b14;font-weight:900">🎁 Coffre des 5 niveaux : +1 bonus de départ et +25 pièces !</p>':`<p style="font-size:14px;margin:4px 0">Plus que ${5-S.wins%5} niveau${5-S.wins%5>1?'x':''} avant le coffre 🎁</p>`}
  <button class="btn" id="mNext">Niveau suivant</button><button class="btn blue" id="mMap">Carte</button>`);
  $('mNext').onclick=()=>{closeModal();showMap();preLevel(S.level)};$('mMap').onclick=()=>{closeModal();showMap()}}
 function lose(){if(FAST){G.result={win:false,left:G.goals.reduce((s,g)=>s+g.n,0)};return}
