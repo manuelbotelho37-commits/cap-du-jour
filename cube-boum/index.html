@@ -403,7 +403,8 @@ function areaSingle(t,r,c){
  if(t.t==='rv'){fxLine(r,c,'v');fxRockets(r,c,'v');snd('rocket');return colCells(c)}
  if(t.t==='bomb'){fxBoom(r,c,2.6);quake();snd('boom');buzz(40);return square(r,c,2)}
  if(t.t==='tnt'){fxBoom(r,c,3.8);quake();snd('boom');buzz(60);return square(r,c,3)}
- if(t.t==='disco'){const col=(t.c!==undefined)?t.c:mostColor();snd('disco');const cs=cubesOf(col);cs.forEach(([a,b])=>fxBoom(a,b,.7));return cs.concat([[r,c]])}
+ if(t.t==='disco'){const col=(t.c!==undefined)?t.c:mostColor();snd('disco');const cs=cubesOf(col);cs.forEach(([a,b])=>fxBoom(a,b,.7));
+  const adj=[];for(const [a,b] of cs)for(const [dr,dc] of N4){const a2=a+dr,b2=b+dc;if(inB(a2,b2)&&isObs(G.grid[a2][b2]))adj.push([a2,b2])}return cs.concat([[r,c]],adj)}
  return[]}
 function runQueue(res){let guard=0;while(res.q.length&&guard++<400){const [r,c]=res.q.shift();const t=G.grid[r][c];if(!t)continue;res.clear.add(K(r,c));hitArea(res,areaSingle(t,r,c))}}
 
@@ -586,9 +587,9 @@ async function tapSpecial(r,c){
    for(const [a,b] of grp){popEl(G.grid[a][b],a,b,false);G.grid[a][b]=null;res.clear.delete(K(a,b))}
    render();await sleep(450);
    for(const [a,b] of targets){const k=K(a,b);res.done.add(k);res.q.push([a,b])}}
-  else if(nB>=2){fxBoom(r,c,nT>=1?6:5);snd('boom');buzz(90);hitArea(res,square(r,c,nT>=1?5:4))}
-  else if(nB>=1&&nR>=1){snd('rocket');snd('boom');const cells=[];for(let d=-1;d<=1;d++){fxLine(r+d,c,'h');fxLine(r,c+d,'v');if(r+d>=0&&r+d<ROWS)cells.push(...rowCells(r+d));if(c+d>=0&&c+d<COLS)cells.push(...colCells(c+d))}hitArea(res,cells)}
-  else{snd('rocket');fxLine(r,c,'h');fxLine(r,c,'v');hitArea(res,rowCells(r).concat(colCells(c)))}
+  else if(nB>=2){fxBoom(r,c,9);quake();snd('boom');buzz(150);hitArea(res,square(r,c,4))}
+  else if(nB>=1&&nR>=1){fxBoom(r,c,5);quake();snd('rocket');snd('boom');buzz(120);const cells=[];for(let d=-1;d<=1;d++){fxRockets(r+d,c,'h');fxRockets(r,c+d,'v');fxLine(r+d,c,'h');fxLine(r,c+d,'v');if(r+d>=0&&r+d<ROWS)cells.push(...rowCells(r+d));if(c+d>=0&&c+d<COLS)cells.push(...colCells(c+d))}hitArea(res,cells)}
+  else{snd('rocket');quake();fxLine(r,c,'h');fxLine(r,c,'v');fxRockets(r,c,'h');fxRockets(r,c,'v');hitArea(res,rowCells(r).concat(colCells(c)))}
   runQueue(res);await applyRes(res)}
  await settle();await afterMove()}
 async function afterMove(){
@@ -706,7 +707,7 @@ function helpMenu(){
  ${row(`<div class="sp">${BOMB}</div>`,'7 ou 8 cubes = <b>TNT</b> : grosse explosion autour d\'elle.')}
  ${row('<div class="disco"></div>','9 cubes ou plus = <b>boule arc-en-ciel</b> : enlève toute une couleur.')}
  ${row('<div class="tnt"><span style="font-size:10px">TNT</span></div>','Une <b>TNT</b> est posée au départ de chaque niveau.')}
- <p style="font-size:16px;margin:6px 0"><b>Combos :</b> touche un spécial collé à un autre spécial. Fusée + fusée = croix. Fusée + bombe = 3 lignes et 3 colonnes. Bombe + bombe = énorme explosion. Arc-en-ciel + fusée ou bombe = toute une couleur se transforme. Arc-en-ciel + arc-en-ciel = tout le plateau.</p>
+ <p style="font-size:16px;margin:6px 0"><b>Combos :</b> touche un spécial collé à un autre spécial. Fusée + fusée = une ligne et une colonne en croix. Fusée + TNT = 3 lignes et 3 colonnes. TNT + TNT = énorme explosion (9 × 9), presque tout le plateau. Arc-en-ciel + fusée = tous les cubes de sa couleur deviennent des fusées. Arc-en-ciel + TNT = ils deviennent tous des TNT. Arc-en-ciel + arc-en-ciel = tout le plateau.</p>
  ${row('<div class="stone hp1"></div>','<b>Pierre</b> : bloque le passage, casse-la en faisant exploser à côté.')}
  ${row(`<div class="gemst">${GEM}</div>`,'<b>Pierre à diamant</b> : casse-la pour ramasser le diamant.')}
  ${row('<div class="brick hp3"></div>','<b>Brique</b> : plusieurs couches (rouge, orange, jaune).')}
