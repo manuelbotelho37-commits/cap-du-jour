@@ -103,9 +103,9 @@ button{font-family:inherit;cursor:pointer}
 @keyframes born{0%{scale:.2}70%{scale:1.2}100%{scale:1}}
 @keyframes nudge{25%{transform:translateX(-8%)}75%{transform:translateX(8%)}}
 @keyframes shake{25%{transform:rotate(-8deg) scale(.92)}75%{transform:rotate(8deg) scale(.92)}}
-.cube{border-radius:17%;background:linear-gradient(170deg,var(--a) 0%,var(--b) 38%,var(--b) 70%,var(--d) 100%);box-shadow:inset 0 -.34em 0 var(--d),inset 0 .2em 0 #ffffff80,inset .16em 0 0 #ffffff33,inset -.16em 0 0 #0000001f,0 3px 3px #0005;font-size:calc(var(--cell)*.18);display:flex;align-items:center;justify-content:center}
-.cube::before{content:"";position:absolute;left:12%;right:12%;top:8%;height:26%;border-radius:40% 40% 30% 30%;background:linear-gradient(#ffffff90,#ffffff00)}
-.cube svg{width:60%;height:60%;position:relative;filter:drop-shadow(0 .08em 0 var(--d))}
+.cube{border-radius:13%;background:repeating-linear-gradient(97deg,#ffffff00 0 9%,#ffffff12 9% 11%,#00000008 11% 14%),linear-gradient(170deg,var(--a) 0%,var(--b) 36%,var(--b) 72%,var(--d) 100%);box-shadow:inset 0 -.34em 0 var(--d),inset 0 .2em 0 #ffffff80,inset .16em 0 0 #ffffff33,inset -.16em 0 0 #0000001f,0 3px 3px #0005;font-size:calc(var(--cell)*.18);display:flex;align-items:center;justify-content:center}
+.cube::before{content:"";position:absolute;left:10%;right:10%;top:6%;height:18%;border-radius:40% 40% 30% 30%;background:linear-gradient(#ffffff70,#ffffff00)}
+.cube svg{width:64%;height:64%;position:relative;filter:drop-shadow(0 -.05em 0 #00000040) drop-shadow(0 .06em 0 #ffffff55)}
 .hint{inset:auto 0 0 auto!important;width:46%;height:46%;pointer-events:none}
 .hint svg{width:100%;height:100%;filter:drop-shadow(0 1px 1px #0008)}
 .sp svg{width:100%;height:100%;filter:drop-shadow(0 2px 2px #0005)}
@@ -128,6 +128,12 @@ button{font-family:inherit;cursor:pointer}
 .safe i{position:absolute;left:25%;top:22%;width:50%;height:50%;border-radius:50%;background:radial-gradient(circle,#4b6a8a 0 22%,#9fb6cc 24% 52%,#3c5570 54%);box-shadow:0 0 0 .12em #2fb35a}
 .safe.hp1 i{box-shadow:0 0 0 .12em #ff4040}
 .safe::after{content:"";position:absolute;right:6%;top:40%;width:8%;height:20%;border-radius:2px;background:#5a6a7a}
+.gemst{inset:2%!important;border-radius:28% 34% 26% 32%;background:radial-gradient(circle at 30% 28%,#eef2f6,#b3bdc9 55%,#7d8999);box-shadow:inset 0 -.25em 0 #0002,0 2px 2px #0003}
+.gemst svg{position:absolute;inset:14%;width:72%;height:72%;filter:drop-shadow(0 2px 1px #0005)}
+.brick{inset:1%!important;border-radius:9%;background:repeating-linear-gradient(180deg,#0000 0 30%,#0002 30% 34%),linear-gradient(var(--k1),var(--k2));box-shadow:inset 0 -.25em 0 #0003,inset 0 .16em 0 #fff5,0 2px 2px #0004}
+.brick::after{content:"";position:absolute;left:18%;right:18%;top:38%;height:24%;border-radius:30%;background:#00000018;box-shadow:inset 0 .08em 0 #0002,0 .06em 0 #fff3}
+.brick.hp3{--k1:#ff6a5a;--k2:#c4201a}.brick.hp2{--k1:#ffa64a;--k2:#d86a10}.brick.hp1{--k1:#ffe066;--k2:#d9a400}
+.bag svg{width:100%;height:100%;filter:drop-shadow(0 2px 2px #0006)}
 .hive{border-radius:46% 46% 34% 34%;background:repeating-linear-gradient(180deg,#ffd05a 0 17%,#e8901a 17% 21%);box-shadow:inset 0 -.25em 0 #0003,inset 0 .2em 0 #fff6,0 2px 2px #0003}
 .hive i{position:absolute;left:36%;top:44%;width:28%;height:24%;border-radius:50%;background:#5a2c00}
 .hive.hp1{filter:saturate(.6) brightness(.95)}
@@ -247,7 +253,7 @@ const KEY='cubeboum_save_v1';
 const START_LEVEL=11482;
 const COLS=9, ROWS=11;
 const CCOL=[['#ff9a8a','#f23b3b','#b01818'],['#9ccdff','#2f86f0','#1a52aa'],['#9af08c','#2fbf3f','#1c8428'],['#fff09a','#ffc21a','#d08a00'],['#dcb4ff','#9b51f5','#6a2bc0']];
-const SYMP='fill="#ffffffd0" stroke="#00000030" stroke-width="4" stroke-linejoin="round"';
+const SYMP='style="fill:var(--d);stroke:#ffffff66;stroke-width:4;stroke-linejoin:round"';
 const SYM=[
  `<svg viewBox="0 0 100 100"><polygon ${SYMP} points="50,10 62,37 91,39 68,58 76,87 50,71 24,87 32,58 9,39 38,37"/></svg>`,
  `<svg viewBox="0 0 100 100"><path ${SYMP} d="M50 10C50 10 22 45 22 62a28 28 0 0 0 56 0C78 45 50 10 50 10Z"/></svg>`,
@@ -257,6 +263,8 @@ const SYM=[
 const ROCKET=`<svg viewBox="0 0 100 100"><rect x="22" y="36" width="56" height="28" rx="12" fill="#ffe7a0" stroke="#b05a00" stroke-width="4"/><polygon points="22,32 4,50 22,68" fill="#ff5a3a" stroke="#a02010" stroke-width="4" stroke-linejoin="round"/><polygon points="78,32 96,50 78,68" fill="#ff5a3a" stroke="#a02010" stroke-width="4" stroke-linejoin="round"/><circle cx="50" cy="50" r="8" fill="#3a8dff" stroke="#1a4a9a" stroke-width="3"/></svg>`;
 const BOMB=`<svg viewBox="0 0 100 100"><circle cx="46" cy="58" r="32" fill="#2b2f3a" stroke="#0e1016" stroke-width="4"/><circle cx="36" cy="46" r="9" fill="#ffffff55"/><rect x="56" y="18" width="16" height="16" rx="3" transform="rotate(40 64 26)" fill="#596070"/><path d="M68 20 Q76 8 86 12" stroke="#c07a2a" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="88" cy="11" r="7" fill="#ffd23a"/><circle cx="88" cy="11" r="3" fill="#fff"/></svg>`;
 const TOY=`<svg viewBox="0 0 100 100"><path d="M50 92 L18 50 Q50 22 82 50 Z" fill="#ff5a8a" stroke="#8a1a3a" stroke-width="4" stroke-linejoin="round"/><path d="M22 53 Q50 68 78 53" stroke="#ffd23a" stroke-width="9" fill="none"/><path d="M34 70 Q50 78 66 70" stroke="#3a8dff" stroke-width="6" fill="none"/><rect x="44" y="12" width="12" height="24" rx="5" fill="#3a8dff" stroke="#1a4a9a" stroke-width="3"/></svg>`;
+const GEM=`<svg viewBox="0 0 100 100"><polygon points="30,22 70,22 88,42 50,86 12,42" fill="#ff5fb4" stroke="#a0105a" stroke-width="4" stroke-linejoin="round"/><polygon points="30,22 50,42 70,22" fill="#ffb3dc"/><polygon points="12,42 50,42 50,86" fill="#e83a95"/><polygon points="38,28 46,28 40,36" fill="#fff"/></svg>`;
+const BAG=`<svg viewBox="0 0 100 100"><path d="M36 30 Q50 40 64 30 L60 20 Q50 26 40 20Z" fill="#b8814a" stroke="#5a3a1a" stroke-width="4" stroke-linejoin="round"/><path d="M38 32 Q12 52 18 76 Q24 92 50 92 Q76 92 82 76 Q88 52 62 32Z" fill="#d9a066" stroke="#5a3a1a" stroke-width="4" stroke-linejoin="round"/><rect x="34" y="28" width="32" height="7" rx="3" fill="#7a4a1a"/><text x="50" y="78" text-anchor="middle" font-size="34" font-weight="900" fill="#6a3a10" font-family="Arial">$</text></svg>`;
 const MASCOT=`<svg viewBox="0 0 120 120"><line x1="60" y1="18" x2="60" y2="6" stroke="#6a4a10" stroke-width="5"/><circle cx="60" cy="7" r="7" fill="#ff4a4a"/><circle cx="60" cy="64" r="44" fill="#ffd35a" stroke="#c98a10" stroke-width="5"/><rect x="24" y="42" width="72" height="38" rx="19" fill="#2b2f45"/><circle cx="45" cy="61" r="11" fill="#7ff0ff"/><circle cx="75" cy="61" r="11" fill="#7ff0ff"/><circle cx="48" cy="58" r="4" fill="#fff"/><circle cx="78" cy="58" r="4" fill="#fff"/><path d="M46 92 Q60 102 74 92" stroke="#7a4a00" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="25" cy="84" r="6" fill="#ff8a6a" opacity=".7"/><circle cx="95" cy="84" r="6" fill="#ff8a6a" opacity=".7"/></svg>`;
 /* icônes des bonus (dessins originaux) */
 const IC_DRILL=`<svg viewBox="0 0 100 100"><rect x="14" y="30" width="50" height="26" rx="10" fill="#ff7ac8" stroke="#8a1a5a" stroke-width="4"/><rect x="24" y="52" width="16" height="34" rx="6" fill="#ffd23a" stroke="#8a6a00" stroke-width="4"/><rect x="62" y="36" width="12" height="14" fill="#9aa7b5" stroke="#3a4552" stroke-width="3"/><path d="M74 38 L94 43 L74 48 Z" fill="#dfe6ee" stroke="#3a4552" stroke-width="3" stroke-linejoin="round"/></svg>`;
@@ -278,7 +286,7 @@ function defSave(){return{v:1,level:START_LEVEL,coins:11,boost:{hammer:4,row:2,c
 let S=null;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!S||!S.v){S=defSave()}else{S=Object.assign(defSave(),S);S.boost=Object.assign(defSave().boost,S.boost);S.pre=Object.assign(defSave().pre,S.pre||{})}
-if(S.cur&&(!S.cur.grid||S.cur.grid.length!==ROWS||S.cur.ver!==2))S.cur=null;
+if(S.cur&&(!S.cur.grid||S.cur.grid.length!==ROWS||S.cur.ver!==3))S.cur=null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 save();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
@@ -308,11 +316,11 @@ function buzz(ms){if(FAST)return;if(S.vibe&&navigator.vibrate)try{navigator.vibr
 /* ====================== MOTEUR ====================== */
 /* Obstacles FIXES (ne tombent pas) : pierre, caisse, coffre-fort, ruche, cage.
    Éléments qui tombent : cubes, fusées, bombes, TNT, boule arc-en-ciel, jouets. */
-const OBS={stone:1,crate:1,safe:2,hive:2,cage:1};
+const OBS={stone:1,crate:1,safe:2,hive:2,cage:1,gem:1,brick:2};
 const isObs=t=>!!t&&OBS[t.t]!==undefined;
 const isSp=t=>!!t&&(t.t==='rh'||t.t==='rv'||t.t==='bomb'||t.t==='tnt'||t.t==='disco');
 const isCube=t=>!!t&&t.t==='c';
-const isToy=t=>!!t&&t.t==='toy';
+const isToy=t=>!!t&&(t.t==='toy'||t.t==='bag');
 const isMov=t=>!!t&&!isObs(t);
 let nid=1;
 const mk=(t,x)=>Object.assign({id:nid++,t},x||{});
@@ -321,59 +329,50 @@ const els=new Map();
 
 /* Plans de niveaux (moitié gauche, colonnes 0 à 4, recopiée en miroir).
    .=cube  #=trou  S=pierre  B=caisse  F=coffre-fort  H=ruche  K=cage avec jouet */
+/* Plans de niveaux (moitié gauche, colonnes 0 à 4, recopiée en miroir).
+   .=case libre (se remplit de cubes si elle est accessible par le haut)  #=trou
+   S=pierre  G=pierre avec gemme  B=brique à couches  F=coffre-fort  H=ruche  M=sac d'argent */
 const TPL=[
- [".....",".....","SSBBB","SSFFF","S....","#HHHH","S.F.F","S....","#HHHH","SSFFF","SSBBB"],
- [".....",".....","B.B.B","B.B.B",".....","FF.FF",".....","H.H.H",".....","SSSSS","SSSSS"],
- [".....",".....","SS...","SS...","SSFF.","..FF.","HH...","HH...","..BBB","..BBB","#...."],
- [".....",".....","...BB","...FF","..HHH","S..FF","S..BB","S....","SS...","BB.HH","BB.HH"],
- [".....",".....","..K..",".....","SBBBB",".....","FF...",".....","..HHH",".....","S#..."],
- [".....","..K..",".....","HHHHH",".....","S....","SFFF.","S....","SBBB.","S....","SS#.."],
- [".....",".....","K...K","BBBBB",".....",".S.S.",".....","FFF..",".....","HH.HH","....."],
- [".....",".....","SSS..","..S..","..S.F","HH..F","....F","BB...","BBB..",".....","#...."],
- [".....",".....",".K.K.","FFFFF","S...S","S.H.S","S...S","BBBBB",".....","SS.SS","SS.SS"],
- [".....",".....","HH.HH","..B..","FFBFF","..B..","..B..","SSBSS",".....","#S.S.","#S.S."],
- [".....",".....","....K","SSSS.","....S","BBB.S","F.B.S","F...S","FHHHS",".....","#...."],
- [".....",".....","S.K.S","SSSSS",".....","BFBFB",".....","HHHHH",".....","SSSSS","....."],
- ["#....","#....","S.BBB","S.FFF","#HHH.","#....","S.F.F","S....","#HHHH","..BBB","#.B.#"],
- ["##...","#....","#SBB.","..FF.","HH...","HH..#","..BBB","S....","SS...","SSFFF","#...."],
- ["#...#",".....",".SKS.","..F..","BBFBB","#...#","#.H.#","..H..","SS.SS","SSBSS","#...#"],
- [".....",".....","K.S..","..S..","FFS..","..S##","HHS##","..S..","BBS..","..S..","....."],
- ["##...","#....","S..K.","SBBBB","#....","#.FF.","S.FF.","S....","#HH.H","#....","##..."]];
+ ["#....","S....","SGMFM","SG.F.","#HHHH","S....","SF.F#","#HHHH","SGBBB","SGBBB","S#B#B"],
+ ["##...","#....","S.FFF","SG...","SGHHH","#MBBB","#..BB","SHHHH","SGFFF","SG...","##.#."],
+ ["#....",".....","GSFSF","G.M.M","HHHHH","S...S","SFF.S","S..BB","HHHBB","GG...","#GBBB"],
+ [".....","S....","SSBBB","GHHHH","G.M..","#FFFF","#....","SHHHH","SBBB.","SGGG.","##..."],
+ ["#....","#....","SGHM.","SGHFF","S.HBB","#...B","S.HHH","SFFFM","S....","SBBBB","#BB##"],
+ ["#....","S....","SFMFM","SGGGG","#....","SHH.H","SBB.B","SBBBB","#HHHH","SGFFF","SG###"],
+ [".....",".....","GBBBB","GFMFM","G....","#HHHH","#BBBB","S....","SFFFF","SGGG.","SS#.."],
+ ["#....","S....","S.BBB","SM.FF","#HHHH","#G.G.","SG.GM","SHHHH","SBBBB","S.FFF","SS#B#"],
+ ["##...","#....","GG.BB","FFMFF","#HHHH","S.B.B","S....","SGFFF","#HHH.","SBBBB","SB##B"],
+ ["#...#",".....","SBMBS","SBFBS","HHHHH","#G.G#","#.M.#","SHHHS","GBBBG","GFFFG","##B##"]];
 
 function genLevel(L){
  const R=rng(L*7919+31);
  const pick=a=>a[Math.floor(R()*a.length)];
- const nC=(L%5===0)?4:5;
+ const nC=pick([3,4,4,4,5]);
  const tpl=TPL[(L*7+Math.floor(R()*TPL.length))%TPL.length];
- // échange des types d'obstacles pour varier les niveaux
- const kinds=['S','B','F','H'];const perm=kinds.slice();
- for(let i=perm.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[perm[i],perm[j]]=[perm[j],perm[i]]}
- const sub={};kinds.forEach((k,i)=>sub[k]=perm[i]);
- const stoneHp=R()<.25?2:1, crateHp=R()<.2?3:2;
+ const brickHp=R()<.3?3:2;
  const mask=[...Array(ROWS)].map(()=>Array(COLS).fill(true));
  const grid=[...Array(ROWS)].map(()=>Array(COLS).fill(null));
- for(let r=0;r<ROWS;r++)for(let h=0;h<5;h++){let ch=tpl[r][h];if(sub[ch])ch=sub[ch];
+ for(let r=0;r<ROWS;r++)for(let h=0;h<5;h++){const ch=tpl[r][h];
   for(const c of h===4?[4]:[h,COLS-1-h]){
    if(ch==='#'){mask[r][c]=false;continue}
-   if(ch==='S')grid[r][c]=mk('stone',{hp:stoneHp});
-   else if(ch==='B')grid[r][c]=mk('crate',{hp:crateHp});
+   if(ch==='S')grid[r][c]=mk('stone',{hp:1});
+   else if(ch==='G')grid[r][c]=mk('gem',{hp:1});
+   else if(ch==='B')grid[r][c]=mk('brick',{hp:brickHp});
    else if(ch==='F')grid[r][c]=mk('safe',{hp:2});
    else if(ch==='H')grid[r][c]=mk('hive',{hp:2});
-   else if(ch==='K')grid[r][c]=mk('cage',{hp:1});
-   else grid[r][c]=mk('c',{c:Math.floor(R()*nC)})}}
- // TNT toujours activée au départ (en haut, là où on joue)
- const cand=[];for(let r=0;r<=2;r++)for(let c=2;c<=6;c++)if(isCube(grid[r][c]))cand.push([r,c]);
- if(cand.length){const [r,c]=pick(cand);grid[r][c]=mk('tnt')}
- const cnt={stone:0,crate:0,safe:0,hive:0,cage:0};let hpSum=0;
- for(const row of grid)for(const t of row)if(isObs(t)){cnt[t.t]++;hpSum+=t.hp}
+   else if(ch==='M')grid[r][c]=mk('bag')}}
+ // TNT toujours activée au départ, dans la zone du haut
+ const cand=[];for(let c=1;c<=7;c++)if(mask[1][c]&&!grid[1][c])cand.push(c);
+ if(cand.length)grid[1][pick(cand)]=mk('tnt');
+ const cnt={hive:0,brick:0,safe:0,bag:0,gem:0,stone:0};let hpSum=0;
+ for(const row of grid)for(const t of row)if(t&&cnt[t.t]!==undefined){cnt[t.t]++;if(isObs(t))hpSum+=t.hp}
  const goals=[];
- if(cnt.cage)goals.push({k:'toy',n:cnt.cage});
- const opts=[['hive','bee',cnt.hive*2],['safe','bag',cnt.safe],['crate','crate',cnt.crate],['stone','stone',cnt.stone]].filter(o=>o[2]>0).sort((a,b)=>b[2]-a[2]);
- for(const o of opts)if(goals.length<4)goals.push({k:o[1],n:o[2]});
- let colorN=0;
- if(goals.length<4&&R()<.6){colorN=15+Math.floor(R()*16);goals.push({k:'c'+Math.floor(R()*nC),n:colorN})}
- const moves=Math.max(22,Math.min(60,Math.round(MOVE_A+hpSum*MOVE_B+colorN*.25+cnt.cage*4)));
- const gs=goals.reduce((s,g)=>s+g.n,0);return{ver:2,level:L,nC,mask,grid,moves,startMoves:moves,goals,goalStart:gs,score:0};
+ if(cnt.hive)goals.push({k:'bee',n:cnt.hive*2});
+ if(cnt.brick)goals.push({k:'brick',n:cnt.brick});
+ if(cnt.safe+cnt.bag)goals.push({k:'bag',n:cnt.safe+cnt.bag});
+ if(cnt.gem)goals.push({k:'gem',n:cnt.gem});
+ const moves=Math.max(22,Math.min(70,Math.round(MOVE_A+hpSum*MOVE_B+(cnt.safe+cnt.bag)*1.2)));
+ const gs=goals.reduce((s,g)=>s+g.n,0);return{ver:3,level:L,nC,mask,grid,moves,startMoves:moves,goals,goalStart:gs,score:0};
 }
 let MOVE_A=14,MOVE_B=.30;
 
@@ -420,8 +419,9 @@ async function applyRes(res){addScore(res.hits.size*50+res.clear.size*20);
   if(t.hp<=0){
    if(t.t==='stone')goalDec('stone',1);
    else if(t.t==='crate')goalDec('crate',1);
-   else if(t.t==='safe'){goalDec('bag',1);flyFx(r,c,'bag',1)}
-   if(t.t==='cage'){popEl(t,r,c,false);G.grid[r][c]=mk('toy')}
+   else if(t.t==='gem'){goalDec('gem',1);flyFx(r,c,'gem',1)}
+   else if(t.t==='brick')goalDec('brick',1);
+   if(t.t==='cage'||t.t==='safe'){popEl(t,r,c,false);G.grid[r][c]=mk(t.t==='cage'?'toy':'bag')}
    else res.clear.add(k)}}
  for(const k of res.clear){const r=Math.floor(k/COLS),c=k%COLS;const t=G.grid[r][c];if(!t)continue;if(isCube(t))goalDec('c'+t.c,1);popEl(t,r,c,res.clear.size<30);G.grid[r][c]=null}
  if(res.hits.size)snd('hit');
@@ -447,8 +447,8 @@ function gravity(){
     G.grid[r][c]=t2;G.grid[r2][c2]=null;moved=true;break}}}
 }
 function collectToys(){let n=0;
- for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){const t=G.grid[r][c];if(!isToy(t))continue;let b=r+1;while(b<ROWS&&!G.mask[b][c])b++;
-  if(b>=ROWS){goalDec('toy',1);flyFx(r,c,'toy',1);popEl(t,r,c,false);G.grid[r][c]=null;n++}}
+ for(let c=0;c<COLS;c++)for(let r=0;r<ROWS;r++){const t=G.grid[r][c];if(!isToy(t))continue;
+  if(r+1>=ROWS||!G.mask[r+1][c]){const gk=t.t==='bag'?'bag':'toy';goalDec(gk,1);flyFx(r,c,gk,1);popEl(t,r,c,false);G.grid[r][c]=null;n++}}
  if(n)snd('coin');return n}
 function hasMove(){for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const t=G.grid[r][c];if(!t)continue;if(isSp(t))return true;if(isCube(t))for(const [dr,dc] of [[1,0],[0,1]]){const r2=r+dr,c2=c+dc;if(inB(r2,c2)&&sameCube(G.grid[r2][c2],t))return true}}return false}
 async function shuffle(msg){
@@ -476,6 +476,9 @@ function tileHTML(t){
   case 'hive':return`<div class="hive hp${t.hp}"><i></i></div>`;
   case 'cage':return`<div class="cage">${TOY}</div>`;
   case 'toy':return`<div class="toy">${TOY}</div>`;
+  case 'bag':return`<div class="bag">${BAG}</div>`;
+  case 'gem':return`<div class="gemst">${GEM}</div>`;
+  case 'brick':return`<div class="brick hp${t.hp}"></div>`;
  }return''}
 const sig=t=>t.t+'|'+(t.c??'')+'|'+(t.hp??'');
 let lastFall=.3;
@@ -511,7 +514,7 @@ function quake(){if(FAST)return;const b=$('board');b.classList.remove('quake');v
 function comboTxt(t){if(FAST)return;const d=document.createElement('div');d.className='combo';d.textContent=t;$('boardWrap').appendChild(d);setTimeout(()=>d.remove(),950)}
 function fxBoom(r,c,rad){if(FAST)return;const d=document.createElement('div');d.className='fx-boom';const s=rad*2*CELL;d.style.width=d.style.height=s+'px';d.style.left=(c*CELL+CELL/2-s/2)+'px';d.style.top=(r*CELL+CELL/2-s/2)+'px';$('fx').appendChild(d);setTimeout(()=>d.remove(),470)}
 function flyFx(r,c,k,n){if(FAST)return;const g=document.querySelector(`.goal[data-k="${k}"]`);if(!g)return;const br=$('board').getBoundingClientRect(),gr=g.getBoundingClientRect();
- const html=k==='bee'?'🐝':k==='bag'?'💰':TOY;
+ const html=k==='bee'?'🐝':k==='bag'?BAG:k==='gem'?GEM:TOY;
  for(let i=0;i<Math.min(n,3);i++){const b=document.createElement('div');b.className='flyer';b.innerHTML=html;b.style.left=(br.left+c*CELL+CELL/4)+'px';b.style.top=(br.top+r*CELL)+'px';document.body.appendChild(b);
   setTimeout(()=>{b.style.left=(gr.left+6)+'px';b.style.top=(gr.top+4)+'px';b.style.opacity='.3'},30+i*90);setTimeout(()=>b.remove(),850+i*90)}}
 let banT;function banner(t){if(FAST)return;const b=$('banner');b.textContent=t;b.classList.add('show');clearTimeout(banT);banT=setTimeout(()=>b.classList.remove('show'),1000)}
@@ -519,7 +522,7 @@ function hints(){const seen=new Set();
  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const t=G.grid[r][c];if(!isCube(t)||seen.has(K(r,c)))continue;const g=flood(r,c,sameCube);g.forEach(([a,b])=>seen.add(K(a,b)));
   const n=g.length;const h=n>=9?'d':n>=7?'b':n>=5?'r':'';
   for(const [a,b] of g){const el=els.get(G.grid[a][b].id);if(!el)continue;if(el._h===h)continue;el._h=h;const hd=el.querySelector('.hint');if(!hd)continue;
-   hd.innerHTML=h==='r'?ROCKET:h==='b'?BOMB:h==='d'?'<div class="disco" style="position:absolute;inset:8%"></div>':''}}}
+   hd.innerHTML=h==='r'?ROCKET:h==='b'?'<div class="tnt" style="position:absolute;inset:6%;font-size:calc(var(--cell)*.13)"><span>TNT</span></div>':h==='d'?'<div class="disco" style="position:absolute;inset:8%"></div>':''}}}
 function drawCells(){const ce=$('cells');ce.innerHTML='';const B=Math.max(2,Math.round(CELL*.07))+'px';
  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(G.mask[r][c]){const d=document.createElement('div');d.className='cell'+((r+c)%2?' alt':'');
   d.style.left=(c*CELL)+'px';d.style.top=(r*CELL)+'px';d.style.width=d.style.height=CELL+'px';
@@ -530,7 +533,7 @@ function layout(){if(!G)return;const w=$('boardWrap');const W=w.clientWidth-6,H=
  for(const el of els.values())el._y=undefined;const b=$('board');b.style.width=COLS*CELL+'px';b.style.height=ROWS*CELL+'px';b.style.setProperty('--cell',CELL+'px');drawCells();
  for(const el of els.values())el.style.transition='none';render();void $('tiles').offsetWidth;for(const el of els.values())el.style.transition=''}
 function goalIcon(k){
- if(k==='bee')return'<span class="emo">🐝</span>';if(k==='bag')return'<span class="emo">💰</span>';if(k==='toy')return TOY;
+ if(k==='bee')return'<span class="emo">🐝</span>';if(k==='bag')return BAG;if(k==='gem')return GEM;if(k==='brick')return'<div class="brick hp3"></div>';if(k==='toy')return TOY;
  if(/^c\d$/.test(k)){const c=+k.slice(1);return`<div class="cube" style="--a:${CCOL[c][0]};--b:${CCOL[c][1]};--d:${CCOL[c][2]}">${SYM[c]}</div>`}
  if(k==='safe')return'<div class="safe hp2"><i></i></div>';if(k==='hive')return'<div class="hive"><i></i></div>';if(k==='cage')return`<div class="cage">${TOY}</div>`;
  return`<div class="${k} hp1"></div>`}
@@ -539,12 +542,12 @@ function drawGoals(bumpK){if(FAST&&bumpK)return;const g=$('goals');
  const x=G.goals.find(q=>q.k===bumpK);const el=g.querySelector(`.goal[data-k="${bumpK}"]`);if(!x||!el)return;el.querySelector('.cnt').innerHTML=x.n>0?x.n:'<span class="ok">✔</span>';el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump')}
 function updMoves(){$('moves').textContent=Math.max(0,G.moves);$('movesBox').classList.toggle('low',G.moves<=5&&!G.over)}
 function updBar(){if(!G||FAST)return;const t=thr();$('barFill').style.width=Math.min(100,Math.round((G.score||0)/t[2]*100))+'%';const ss=document.querySelectorAll('#movesBox .bar s');if(ss.length===2){ss[0].style.left=(t[0]/t[2]*100)+'%';ss[1].style.left=(t[1]/t[2]*100)+'%'}}
-function drawBoosters(){$('bbar').innerHTML=`<button class="bst gear" id="bPause" aria-label="Pause">⚙️</button>`+BOOSTERS.map(b=>{const n=S.boost[b.k]||0;return`<button class="bst${G&&G.booster===b.k?' on':''}" data-b="${b.k}">${b.ic}<span class="n${n?'':' plus'}">${n||'+'}</span></button>`}).join('');
+function drawBoosters(){$('bbar').innerHTML=`<button class="bst gear" id="bPause" aria-label="Pause">⚙️</button>`+BOOSTERS.filter(b=>b.k!=='shuffle').map(b=>{const n=S.boost[b.k]||0;return`<button class="bst${G&&G.booster===b.k?' on':''}" data-b="${b.k}">${b.ic}<span class="n${n?'':' plus'}">${n||'+'}</span></button>`}).join('');
  $('bPause').onclick=pauseMenu;document.querySelectorAll('.bst[data-b]').forEach(e=>e.onclick=()=>boosterTap(e.dataset.b))}
 function tip(t){const e=$('tip');if(t){e.textContent=t;e.classList.remove('hidden')}else e.classList.add('hidden')}
 
 /* ====================== ACTIONS ====================== */
-function saveCur(){if(!G||G.over)return;const grid=G.grid.map(row=>row.map(t=>t?{id:t.id,t:t.t,c:t.c,hp:t.hp}:null));S.cur={ver:2,level:G.level,nC:G.nC,mask:G.mask,grid,moves:G.moves,startMoves:G.startMoves,goals:G.goals,goalStart:G.goalStart,score:G.score||0};save()}
+function saveCur(){if(!G||G.over)return;const grid=G.grid.map(row=>row.map(t=>t?{id:t.id,t:t.t,c:t.c,hp:t.hp}:null));S.cur={ver:3,level:G.level,nC:G.nC,mask:G.mask,grid,moves:G.moves,startMoves:G.startMoves,goals:G.goals,goalStart:G.goalStart,score:G.score||0};save()}
 function boardTap(ev){if(!G||G.busy||G.over)return;const br=$('board').getBoundingClientRect();const c=Math.floor((ev.clientX-br.left)/CELL),r=Math.floor((ev.clientY-br.top)/CELL);playAt(r,c)}
 function playAt(r,c){if(!G||G.busy||G.over||!inB(r,c))return;const t=G.grid[r][c];if(!t)return;
  if(G.booster)return useBooster(r,c);
@@ -556,7 +559,7 @@ async function tapCube(r,c){
  const grp=flood(r,c,sameCube);if(grp.length<2){nudge(G.grid[r][c]);snd('bad');return}
  G.busy=true;G.moves--;updMoves();buzz(15);
  const res=newRes();const n=grp.length;const col=G.grid[r][c].c;let sp=null;
- if(n>=9)sp=mk('disco',{c:col});else if(n>=7)sp=mk('bomb');else if(n>=5)sp=mk(Math.random()<.5?'rh':'rv');
+ if(n>=9)sp=mk('disco',{c:col});else if(n>=7)sp=mk('tnt');else if(n>=5)sp=mk(Math.random()<.5?'rh':'rv');
  if(n>=9)comboTxt('Génial !');else if(n>=7)comboTxt('Super !');else if(n>=5)comboTxt('Bien !');addScore(n>=5?n*15:0);
  const adj=new Set();
  for(const [a,b] of grp){res.clear.add(K(a,b));for(const [dr,dc] of N4){const a2=a+dr,b2=b+dc;if(inB(a2,b2)&&isObs(G.grid[a2][b2]))adj.add(K(a2,b2))}}
@@ -649,7 +652,7 @@ function pauseMenu(){if(!G)return;
 /* ====================== ÉCRANS ====================== */
 const PRE=[{k:'rk',name:'2 fusées',html:()=>`<div class="sp" style="position:absolute;inset:0">${ROCKET}</div>`},{k:'bm',name:'Bombe',html:()=>`<div class="sp" style="position:absolute;inset:0">${BOMB}</div>`},{k:'dc',name:'Boule arc-en-ciel',html:()=>'<div class="disco" style="position:absolute;inset:6%"></div>'}];
 function preLevel(L){
- if(S.cur&&S.cur.level===L&&S.cur.ver===2)return startLevel(L);
+ if(S.cur&&S.cur.level===L&&S.cur.ver===3)return startLevel(L);
  const g=genLevel(L);nid=1;const pick={};
  const draw=()=>{modal(`<h2>Niveau ${L}</h2><p style="margin:0">Objectif :</p><div class="preGoals">${g.goals.map(x=>`<span class="goal"><span class="gi">${goalIcon(x.k)}</span>${x.n}</span>`).join('')}</div>
  <p style="margin:8px 0 0;font-size:16px">Bonus de départ :</p>
@@ -665,9 +668,9 @@ function preLevel(L){
 function startLevel(L,pick){
  els.forEach(e=>e.remove());els.clear();$('fx').innerHTML='';
  let resumed=false;
- if(S.cur&&S.cur.level===L&&S.cur.ver===2){const c=S.cur;let mx=0;const grid=c.grid.map(row=>row.map(t=>{if(!t)return null;const o={id:t.id,t:t.t};if(t.c!==undefined&&t.c!==null)o.c=t.c;if(t.hp!==undefined&&t.hp!==null)o.hp=t.hp;mx=Math.max(mx,t.id);return o}));nid=mx+1;
-  G={ver:2,level:L,nC:c.nC,mask:c.mask,grid,moves:c.moves,startMoves:c.startMoves,goals:c.goals,goalStart:c.goalStart||c.goals.reduce((s,g)=>s+g.n,0),score:c.score||0};resumed=c.moves<c.startMoves}
- else{G=genLevel(L);S.cur=null;
+ if(S.cur&&S.cur.level===L&&S.cur.ver===3){const c=S.cur;let mx=0;const grid=c.grid.map(row=>row.map(t=>{if(!t)return null;const o={id:t.id,t:t.t};if(t.c!==undefined&&t.c!==null)o.c=t.c;if(t.hp!==undefined&&t.hp!==null)o.hp=t.hp;mx=Math.max(mx,t.id);return o}));nid=mx+1;
+  G={ver:3,level:L,nC:c.nC,mask:c.mask,grid,moves:c.moves,startMoves:c.startMoves,goals:c.goals,goalStart:c.goalStart||c.goals.reduce((s,g)=>s+g.n,0),score:c.score||0};resumed=c.moves<c.startMoves}
+ else{G=genLevel(L);S.cur=null;gravity();
   if(pick){const cand=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(isCube(G.grid[r][c]))cand.push([r,c]);
    const put=t=>{if(!cand.length)return;const i=Math.floor(Math.random()*Math.min(cand.length,24));const [r,c]=cand.splice(i,1)[0];G.grid[r][c]=mk(t)};
    if(pick.rk){put('rh');put('rv')}if(pick.bm)put('bomb');if(pick.dc){put('disco')}}}
@@ -700,14 +703,16 @@ function helpMenu(){
  modal(`<h2>Règles</h2><div class="help">
  ${row('<div class="cube" style="--a:#ff9a8a;--b:#f23b3b;--d:#b01818"></div>','Touche 2 cubes ou plus de la même couleur collés.')}
  ${row(`<div class="sp">${ROCKET}</div>`,'5 ou 6 cubes = <b>fusée</b> : vide une ligne ou une colonne.')}
- ${row(`<div class="sp">${BOMB}</div>`,'7 ou 8 cubes = <b>bombe</b> : explose autour d\'elle.')}
+ ${row(`<div class="sp">${BOMB}</div>`,'7 ou 8 cubes = <b>TNT</b> : grosse explosion autour d\'elle.')}
  ${row('<div class="disco"></div>','9 cubes ou plus = <b>boule arc-en-ciel</b> : enlève toute une couleur.')}
- ${row('<div class="tnt"><span style="font-size:10px">TNT</span></div>','<b>TNT</b> au départ de chaque niveau : grosse explosion.')}
+ ${row('<div class="tnt"><span style="font-size:10px">TNT</span></div>','Une <b>TNT</b> est posée au départ de chaque niveau.')}
  <p style="font-size:16px;margin:6px 0"><b>Combos :</b> touche un spécial collé à un autre spécial. Fusée + fusée = croix. Fusée + bombe = 3 lignes et 3 colonnes. Bombe + bombe = énorme explosion. Arc-en-ciel + fusée ou bombe = toute une couleur se transforme. Arc-en-ciel + arc-en-ciel = tout le plateau.</p>
- ${row('<div class="stone hp1"></div>','<b>Pierres</b> et <b>caisses</b> : fais exploser à côté (les caisses ont plusieurs couches).')}
- ${row('<div class="safe hp2"><i></i></div>','<b>Coffre-fort</b> : 2 coups, il libère un sac d\'argent 💰.')}
+ ${row('<div class="stone hp1"></div>','<b>Pierre</b> : bloque le passage, casse-la en faisant exploser à côté.')}
+ ${row(`<div class="gemst">${GEM}</div>`,'<b>Pierre à diamant</b> : casse-la pour ramasser le diamant.')}
+ ${row('<div class="brick hp3"></div>','<b>Brique</b> : plusieurs couches (rouge, orange, jaune).')}
+ ${row('<div class="safe hp2"><i></i></div>','<b>Coffre-fort</b> : 2 coups, il libère un sac d\'argent.')}
+ ${row(`<div class="bag">${BAG}</div>`,'<b>Sac d\'argent</b> : fais-le descendre tout en bas pour le ramasser.')}
  ${row('<div class="hive"><i></i></div>','<b>Ruche</b> : chaque coup libère une abeille 🐝.')}
- ${row(`<div class="cage">${TOY}</div>`,'<b>Cage</b> : casse-la, puis fais descendre le <b>jouet</b> tout en bas.')}
  <p style="font-size:16px;margin:6px 0">Les obstacles ne bougent pas : les cubes coulent autour, même en biais.</p>
  </div><button class="btn" id="hOk">Compris</button>`);$('hOk').onclick=closeModal}
 function bonusMenu(){
@@ -746,7 +751,7 @@ function settingsMenu(){
 const backupName=()=>'cube-boum-sauvegarde-'+today()+'.json';
 const backupBlob=()=>new Blob([JSON.stringify(Object.assign({app:'cubeboum'},S))],{type:'application/json'});
 $('fileIn').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d||!d.v||!d.level)throw 0;
- confirmBox(`Restaurer cette sauvegarde ?<br><small>Niveau ${d.level}, ${d.coins} pièces. Ta partie actuelle sera remplacée.</small>`,'Restaurer',()=>{delete d.app;S=Object.assign(defSave(),d);S.boost=Object.assign(defSave().boost,d.boost);if(S.cur&&S.cur.ver!==2)S.cur=null;save();renderMap();toast('Sauvegarde restaurée')})}catch(err){toast('Fichier non reconnu')}};rd.readAsText(f)};
+ confirmBox(`Restaurer cette sauvegarde ?<br><small>Niveau ${d.level}, ${d.coins} pièces. Ta partie actuelle sera remplacée.</small>`,'Restaurer',()=>{delete d.app;S=Object.assign(defSave(),d);S.boost=Object.assign(defSave().boost,d.boost);if(S.cur&&S.cur.ver!==3)S.cur=null;save();renderMap();toast('Sauvegarde restaurée')})}catch(err){toast('Fichier non reconnu')}};rd.readAsText(f)};
 
 /* ====================== DÉMARRAGE ====================== */
 $('board').addEventListener('pointerdown',boardTap);
