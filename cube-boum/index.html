@@ -138,6 +138,18 @@ button{font-family:inherit;cursor:pointer}
 .brick::after{content:"";position:absolute;left:18%;right:18%;top:38%;height:24%;border-radius:30%;background:#00000018;box-shadow:inset 0 .08em 0 #0002,0 .06em 0 #fff3}
 .brick.hp3{--k1:#ff6a5a;--k2:#c4201a}.brick.hp2{--k1:#ffa64a;--k2:#d86a10}.brick.hp1{--k1:#ffe066;--k2:#d9a400}
 .bag svg{width:100%;height:100%;filter:drop-shadow(0 2px 2px #0006)}
+.pump{inset:3%!important;border-radius:46% 46% 42% 42%;background:radial-gradient(ellipse 22% 48% at 50% 55%,#ffb347,#0000 70%),repeating-linear-gradient(90deg,#f08a1a 0 14%,#ffa23a 14% 24%,#d9700a 24% 28%);box-shadow:inset 0 -.3em 0 #b8560044,inset 0 .2em 0 #fff6,0 2px 2px #0004}
+.pump::before{content:"";position:absolute;left:44%;top:-8%;width:12%;height:20%;border-radius:30%;background:#3f8a2a;box-shadow:.12em .05em 0 -.02em #5fb03a}
+.pump.hp1{background:radial-gradient(circle at 50% 58%,#fff7b0 0 18%,#ffcf40 30%,#0000 60%),repeating-linear-gradient(90deg,#f08a1a 0 14%,#ffa23a 14% 24%,#d9700a 24% 28%);box-shadow:0 0 .5em #ffd040,inset 0 .2em 0 #fff6}
+.vial{inset:6% 22%!important;border-radius:20% 20% 36% 36%/12% 12% 26% 26%;background:linear-gradient(90deg,#ffffff55,#ffffff11 40%,#ffffff44),linear-gradient(#0000 34%,#c45cff 34%);box-shadow:inset 0 0 0 .1em #e8f6ff,0 2px 2px #0004}
+.vial::before{content:"";position:absolute;left:18%;right:18%;top:-6%;height:14%;border-radius:20%;background:#c98a4a}
+.metal{inset:1%!important;border-radius:10%;background:linear-gradient(150deg,#f2f6fa,#b9c6d3 50%,#8796a6);box-shadow:inset 0 -.25em 0 #0003,inset 0 .15em 0 #fff,0 2px 2px #0004}
+.metal::before{content:"";position:absolute;inset:12%;background:radial-gradient(circle,#6a7a8a 0 18%,#0000 22%) 0 0/50% 50%;opacity:.8}
+.mud{inset:0!important;background:radial-gradient(circle at 30% 40%,#a88456 0 6%,#0000 7%),radial-gradient(circle at 70% 70%,#a88456 0 5%,#0000 6%),linear-gradient(#a87444,#8a5a30);box-shadow:inset 0 .12em 0 #c9935a}
+.timer{inset:6%!important;border-radius:50%;background:radial-gradient(circle at 35% 30%,#6a7488,#2b3040 60%,#151820);box-shadow:inset 0 -.2em 0 #0006,0 2px 3px #0006}
+.timer::before{content:"";position:absolute;right:4%;top:-10%;width:22%;height:22%;border-radius:50%;background:#ffcf2e;box-shadow:0 0 .4em #ff9a1a}
+.timer b{position:absolute;inset:26%;border-radius:30%;background:#fff;color:#c0201a;font-weight:900;font-size:calc(var(--cell)*.26);display:flex;align-items:center;justify-content:center}
+.timer.low{animation:bump .6s infinite}
 .hive{border-radius:46% 46% 34% 34%;background:repeating-linear-gradient(180deg,#ffd05a 0 17%,#e8901a 17% 21%);box-shadow:inset 0 -.25em 0 #0003,inset 0 .2em 0 #fff6,0 2px 2px #0003}
 .hive i{position:absolute;left:36%;top:44%;width:28%;height:24%;border-radius:50%;background:#5a2c00}
 .hive.hp1{filter:saturate(.6) brightness(.95)}
@@ -320,7 +332,7 @@ function buzz(ms){if(FAST)return;if(S.vibe&&navigator.vibrate)try{navigator.vibr
 /* ====================== MOTEUR ====================== */
 /* Obstacles FIXES (ne tombent pas) : pierre, caisse, coffre-fort, ruche, cage.
    Éléments qui tombent : cubes, fusées, bombes, TNT, boule arc-en-ciel, jouets. */
-const OBS={stone:1,crate:1,safe:2,hive:2,cage:1,gem:1,brick:2};
+const OBS={stone:1,crate:1,safe:2,hive:2,cage:1,gem:1,brick:2,pump:2,vial:1,metal:1,mud:1,timer:1};
 const isObs=t=>!!t&&OBS[t.t]!==undefined;
 const isSp=t=>!!t&&(t.t==='rh'||t.t==='rv'||t.t==='bomb'||t.t==='tnt'||t.t==='disco');
 const isCube=t=>!!t&&t.t==='c';
@@ -349,6 +361,25 @@ const TPL=[
  ["#...#",".....","SBMBS","SBFBS","HHHHH","#G.G#","#.M.#","SHHHS","GBBBG","GFFFG","##B##"]];
 
 /* Générateur de plateaux : chaque niveau a sa propre forme et son propre mélange d'obstacles */
+function zoneLayout(R){
+ const pick=a=>a[Math.floor(R()*a.length)];const rnd=(a,b)=>a+Math.floor(R()*(b-a+1));
+ const g=[...Array(ROWS)].map(()=>Array(COLS).fill('.'));
+ const put=(r,c,ch)=>{if(r>=0&&r<ROWS&&c>=0&&c<COLS)g[r][c]=ch};
+ const w=pick([3,3,4,5,9]),x0=w===9?0:rnd(0,COLS-w),h=rnd(3,5);
+ const side=pick(['mud','hole','mix']);
+ for(let r=0;r<h;r++)for(let c=0;c<COLS;c++)if(c<x0||c>=x0+w)g[r][c]=side==='hole'&&r<h-2?'#':side==='mix'&&r<1?'#':'D';
+ const kinds=['P','V','H','B','G','F','S'];for(let i=kinds.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[kinds[i],kinds[j]]=[kinds[j],kinds[i]]}
+ const use=kinds.slice(0,rnd(2,3));
+ let c=0;while(c<COLS){const cw=rnd(1,2);const k=R()<.25?'.':pick(use);const r1=h+rnd(0,1);for(let cc=c;cc<Math.min(COLS,c+cw);cc++)for(let r=r1;r<ROWS;r++)g[r][cc]=k;c+=cw}
+ if(R()<.6){const pw=rnd(3,5),px=rnd(0,COLS-pw),py=rnd(h,ROWS-3);for(let r=py;r<py+2;r++)for(let cc=px;cc<px+pw;cc++)g[r][cc]='D';if(R()<.6)g[py+1][px+Math.floor(pw/2)]='Q'}
+ if(side==='mud'&&R()<.4){for(let r=0;r<h;r++)for(let cc=0;cc<COLS;cc++)if(g[r][cc]==='D'&&r===h-1&&R()<.3){g[r][cc]='Q';r=h;break}}
+ if(R()<.7){const st=rnd(2,3);for(let r=1;r<ROWS;r+=st){put(r,0,'X');put(r,COLS-1,'X')}}
+ const notches=rnd(2,5);for(let i=0;i<notches;i++){const r=rnd(h,ROWS-1),cc=pick([0,COLS-1]);put(r,cc,'#')}
+ if(R()<.5){put(ROWS-1,0,'#');put(ROWS-1,COLS-1,'#')}
+ for(let r=0;r<h;r++)for(let cc=x0;cc<x0+w;cc++)g[r][cc]='.';
+ if(R()<.5){for(let r=h;r<ROWS;r++)if(R()<.15)g[r][x0+Math.floor(w/2)]='M'}
+ return g.map(r=>r.join(''));
+}
 function procLayout(R){
  const pick=a=>a[Math.floor(R()*a.length)];
  const all=['S','G','B','F','H','M'];for(let i=all.length-1;i>0;i--){const j=Math.floor(R()*(i+1));[all[i],all[j]]=[all[j],all[i]]}
@@ -374,7 +405,8 @@ function genLevel(L){
  const pick=a=>a[Math.floor(R()*a.length)];
  const nC=pick([3,4,4,4,5]);
  let rows;
- if(R()<.3){const t=TPL[(L*7+Math.floor(R()*TPL.length))%TPL.length];rows=t.map(h=>h+h.slice(0,4).split('').reverse().join(''))}
+ const roll=R();if(roll<.15){const t=TPL[(L*7+Math.floor(R()*TPL.length))%TPL.length];rows=t.map(h=>h+h.slice(0,4).split('').reverse().join(''))}
+ else if(roll<.65)rows=zoneLayout(R);
  else rows=procLayout(R);
  const brickHp=R()<.3?3:2;
  const mask=[...Array(ROWS)].map(()=>Array(COLS).fill(true));
@@ -386,17 +418,25 @@ function genLevel(L){
    else if(ch==='B')grid[r][c]=mk('brick',{hp:brickHp});
    else if(ch==='F')grid[r][c]=mk('safe',{hp:2});
    else if(ch==='H')grid[r][c]=mk('hive',{hp:2});
-   else if(ch==='M')grid[r][c]=mk('bag')}}
+   else if(ch==='M')grid[r][c]=mk('bag');
+   else if(ch==='P')grid[r][c]=mk('pump',{hp:2});
+   else if(ch==='V')grid[r][c]=mk('vial',{hp:1});
+   else if(ch==='X')grid[r][c]=mk('metal',{hp:1});
+   else if(ch==='D')grid[r][c]=mk('mud',{hp:1});
+   else if(ch==='Q')grid[r][c]=mk('timer',{hp:1,n:12+Math.floor(R()*14)})}}
  // TNT toujours activée au départ, dans la zone du haut
  const cand=[];for(let c=1;c<=7;c++)if(mask[1][c]&&!grid[1][c])cand.push(c);
  if(cand.length)grid[1][pick(cand)]=mk('tnt');
- const cnt={hive:0,brick:0,safe:0,bag:0,gem:0,stone:0};let hpSum=0;
+ const cnt={hive:0,brick:0,safe:0,bag:0,gem:0,stone:0,pump:0,vial:0,metal:0,mud:0};let hpSum=0;
  for(const row of grid)for(const t of row)if(t&&cnt[t.t]!==undefined){cnt[t.t]++;if(isObs(t))hpSum+=t.hp}
  const goals=[];
  if(cnt.hive)goals.push({k:'bee',n:cnt.hive*2});
  if(cnt.brick)goals.push({k:'brick',n:cnt.brick});
  if(cnt.safe+cnt.bag)goals.push({k:'bag',n:cnt.safe+cnt.bag});
  if(cnt.gem)goals.push({k:'gem',n:cnt.gem});
+ for(const k of ['pump','vial','metal','mud'])if(cnt[k])goals.push({k,n:cnt[k]});
+ let nT=0;for(const row of grid)for(const t of row)if(t&&t.t==='timer')nT++;
+ goals.sort((a,b)=>b.n-a.n);goals.length=Math.min(goals.length,4);
  const moves=Math.max(22,Math.min(70,Math.round(MOVE_A+hpSum*MOVE_B+(cnt.safe+cnt.bag)*1.2)));
  const gs=goals.reduce((s,g)=>s+g.n,0);return{ver:3,level:L,nC,mask,grid,moves,startMoves:moves,goals,goalStart:gs,score:0};
 }
@@ -448,6 +488,8 @@ async function applyRes(res){addScore(res.hits.size*50+res.clear.size*20);
    else if(t.t==='crate')goalDec('crate',1);
    else if(t.t==='gem'){goalDec('gem',1);flyFx(r,c,'gem',1)}
    else if(t.t==='brick')goalDec('brick',1);
+   else if(t.t==='pump'||t.t==='vial'||t.t==='metal'||t.t==='mud')goalDec(t.t,1);
+   else if(t.t==='timer')flyFx(r,c,'bee',0);
    if(t.t==='cage'||t.t==='safe'){popEl(t,r,c,false);G.grid[r][c]=mk(t.t==='cage'?'toy':'bag')}
    else res.clear.add(k)}}
  for(const k of res.clear){const r=Math.floor(k/COLS),c=k%COLS;const t=G.grid[r][c];if(!t)continue;if(isCube(t))goalDec('c'+t.c,1);popEl(t,r,c,res.clear.size<30);G.grid[r][c]=null}
@@ -506,8 +548,13 @@ function tileHTML(t){
   case 'bag':return`<div class="bag">${BAG}</div>`;
   case 'gem':return`<div class="gemst">${GEM}</div>`;
   case 'brick':return`<div class="brick hp${t.hp}"></div>`;
+  case 'pump':return`<div class="pump hp${t.hp}"></div>`;
+  case 'vial':return`<div class="vial"></div>`;
+  case 'metal':return`<div class="metal"></div>`;
+  case 'mud':return`<div class="mud"></div>`;
+  case 'timer':return`<div class="timer${t.n<=3?' low':''}"><b>${t.n}</b></div>`;
  }return''}
-const sig=t=>t.t+'|'+(t.c??'')+'|'+(t.hp??'');
+const sig=t=>t.t+'|'+(t.c??'')+'|'+(t.hp??'')+'|'+(t.n??'');
 let lastFall=.3;
 function render(){
  const tl=$('tiles');const seen=new Set();let maxFall=0;
@@ -562,7 +609,7 @@ function layout(){if(!G)return;const w=$('boardWrap');const W=w.clientWidth-6,H=
  for(const el of els.values())el._y=undefined;const b=$('board');b.style.width=COLS*CELL+'px';b.style.height=ROWS*CELL+'px';b.style.setProperty('--cell',CELL+'px');drawCells();
  for(const el of els.values())el.style.transition='none';render();void $('tiles').offsetWidth;for(const el of els.values())el.style.transition=''}
 function goalIcon(k){
- if(k==='bee')return'<span class="emo">🐝</span>';if(k==='bag')return BAG;if(k==='gem')return GEM;if(k==='brick')return'<div class="brick hp3"></div>';if(k==='toy')return TOY;
+ if(k==='bee')return'<span class="emo">🐝</span>';if(k==='bag')return BAG;if(k==='gem')return GEM;if(k==='brick')return'<div class="brick hp3"></div>';if(k==='pump')return'<div class="pump hp2"></div>';if(k==='vial')return'<div class="vial"></div>';if(k==='metal')return'<div class="metal"></div>';if(k==='mud')return'<div class="mud" style="border-radius:20%"></div>';if(k==='toy')return TOY;
  if(/^c\d$/.test(k)){const c=+k.slice(1);return`<div class="cube" style="--a:${CCOL[c][0]};--b:${CCOL[c][1]};--d:${CCOL[c][2]}">${SYM[c]}</div>`}
  if(k==='safe')return'<div class="safe hp2"><i></i></div>';if(k==='hive')return'<div class="hive"><i></i></div>';if(k==='cage')return`<div class="cage">${TOY}</div>`;
  return`<div class="${k} hp1"></div>`}
@@ -592,7 +639,7 @@ async function tapCube(r,c){
  const pk=a=>a[Math.floor(Math.random()*a.length)];if(n>=9)comboTxt(pk(['Fantastique !','Génial !','Incroyable !']));else if(n>=7)comboTxt(pk(['Super !','Excellent !']));else if(n>=5)comboTxt(pk(['Bien !','Joli !']));addScore(n>=5?n*15:0);
  const adj=new Set();
  for(const [a,b] of grp){res.clear.add(K(a,b));for(const [dr,dc] of N4){const a2=a+dr,b2=b+dc;if(inB(a2,b2)&&isObs(G.grid[a2][b2]))adj.add(K(a2,b2))}}
- for(const k of adj)res.hits.set(k,1);
+ for(const k of adj){const tt=G.grid[Math.floor(k/COLS)][k%COLS];if(tt&&tt.t!=='metal')res.hits.set(k,1)}
  if(sp&&!FAST){const gl=grp.map(([a,b])=>els.get(G.grid[a][b].id)).filter(Boolean);gl.forEach(el=>el.classList.add('grp'));await sleep(180);
   gl.forEach(el=>{el.classList.add('fast');el.style.transform=`translate(${c*CELL}px,${r*CELL}px)`});await sleep(320);
   const f=document.createElement('div');f.className='flash';const fs=CELL*2.2;f.style.width=f.style.height=fs+'px';f.style.left=(c*CELL+CELL/2-fs/2)+'px';f.style.top=(r*CELL+CELL/2-fs/2)+'px';$('fx').appendChild(f);setTimeout(()=>f.remove(),420)}
@@ -624,6 +671,9 @@ async function tapSpecial(r,c){
  await settle();await afterMove()}
 async function afterMove(){
  if(G.goals.every(g=>g.n<=0)){await win();return}
+ let boom=false;for(const row of G.grid)for(const t of row)if(t&&t.t==='timer'){t.n--;if(t.n<=0)boom=true}
+ if(G.grid.flat().some(t=>t&&t.t==='timer'))render();
+ if(boom){saveCur();G.busy=false;G.timerLost=true;lose();return}
  if(G.moves<=0){saveCur();G.busy=false;lose();return}
  G.busy=false;saveCur()}
 function boosterTap(k){if(!G||G.busy||G.over)return;
@@ -668,10 +718,10 @@ async function win(){
  $('mNext').onclick=()=>{closeModal();showMap();preLevel(S.level)};$('mMap').onclick=()=>{closeModal();showMap()}}
 function lose(){if(FAST){G.result={win:false,left:G.goals.reduce((s,g)=>s+g.n,0)};return}
  snd('lose');const rest=G.goals.filter(g=>g.n>0).map(g=>`<span class="goal" style="display:inline-flex;margin:0 6px"><span class="gi">${goalIcon(g.k)}</span>${g.n}</span>`).join('');
- modal(`<h2>Plus de coups !</h2><p>Il reste :</p><div style="font-size:22px;font-weight:900;margin-bottom:8px">${rest}</div>
+ modal(`<h2>${G.timerLost?'La bombe a explosé !':'Plus de coups !'}</h2><p>Il reste :</p><div style="font-size:22px;font-weight:900;margin-bottom:8px">${rest}</div>
  <button class="btn" id="m5" ${S.coins<10?'disabled':''}>+5 coups (10 🪙)</button>
  <button class="btn blue" id="mRe">Rejouer (vies illimitées)</button><button class="btn grey" id="mMap">Carte</button>`);
- $('m5').onclick=()=>{if(S.coins<10)return;S.coins-=10;G.moves+=5;save();updMoves();saveCur();closeModal();snd('coin')};
+ $('m5').onclick=()=>{if(S.coins<10)return;S.coins-=10;G.moves+=5;if(G.timerLost){G.timerLost=false;for(const row of G.grid)for(const t of row)if(t&&t.t==='timer')t.n+=5;render()}save();updMoves();saveCur();closeModal();snd('coin')};
  $('mRe').onclick=()=>{closeModal();S.cur=null;save();const L=G.level;showMap();preLevel(L)};
  $('mMap').onclick=()=>{closeModal();S.cur=null;save();showMap()}}
 function pauseMenu(){if(!G)return;
@@ -707,7 +757,7 @@ function startLevel(L,pick){
    if(pick.rk){put('rh');put('rv')}if(pick.bm)put('bomb');if(pick.dc){put('disco')}}}
  G.busy=false;G.over=false;G.booster=null;
  $('map').classList.add('hidden');$('game').classList.remove('hidden');
- $('lvlNum').textContent=L;$('game').style.backgroundImage='radial-gradient(ellipse 60% 40% at 10% 90%,#ffb35a33,transparent 70%),radial-gradient(circle at 15% 25%,#ffffff10 0 50px,transparent 51px),'+BGS[L%BGS.length];$('mascotFace').innerHTML=MASCOT;drawGoals();updMoves();updBar();drawBoosters();tip('');
+ $('lvlNum').textContent=L;$('game').style.background='radial-gradient(ellipse 60% 40% at 10% 90%,#ffb35a33,transparent 70%) no-repeat,radial-gradient(circle at 15% 25%,#ffffff10 0 50px,transparent 51px) 0 0/180px 180px,'+BGS[L%BGS.length]+' no-repeat';$('game').style.backgroundSize='100% 100%,180px 180px,100% 100%';$('mascotFace').innerHTML=MASCOT;drawGoals();updMoves();updBar();drawBoosters();tip('');
  if(!FAST&&history.state!=='game')history.pushState('game','');
  const go=()=>{layout();if(!hasMove())shuffle().then(hints);else hints();saveCur();banner(resumed?'C\'est reparti !':'TNT activée !')};
  if(FAST)go();else requestAnimationFrame(go)}
@@ -744,6 +794,11 @@ function helpMenu(){
  ${row('<div class="safe hp2"><i></i></div>','<b>Coffre-fort</b> : 2 coups, il libère un sac d\'argent.')}
  ${row(`<div class="bag">${BAG}</div>`,'<b>Sac d\'argent</b> : fais-le descendre tout en bas pour le ramasser.')}
  ${row('<div class="hive"><i></i></div>','<b>Ruche</b> : chaque coup libère une abeille 🐝.')}
+ ${row('<div class="pump hp2"></div>','<b>Citrouille</b> : 1 coup l\'allume, le 2e la ramasse.')}
+ ${row('<div class="vial"></div>','<b>Fiole</b> : 1 coup pour la ramasser.')}
+ ${row('<div class="metal"></div>','<b>Bloc en métal</b> : seuls les fusées, TNT et arc-en-ciel le cassent.')}
+ ${row('<div class="mud" style="border-radius:20%"></div>','<b>Terre</b> : creuse-la en faisant exploser à côté.')}
+ ${row('<div class="timer"><b style="font-size:10px">9</b></div>','<b>Bombe à minuterie</b> : désamorce-la avant que le chiffre arrive à 0 !')}
  <p style="font-size:16px;margin:6px 0">Les obstacles ne bougent pas : les cubes coulent autour, même en biais.</p>
  </div><button class="btn" id="hOk">Compris</button>`);$('hOk').onclick=closeModal}
 function bonusMenu(){
