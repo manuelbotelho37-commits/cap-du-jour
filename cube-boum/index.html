@@ -77,6 +77,9 @@ button{font-family:inherit;cursor:pointer}
 .bar s{position:absolute;top:0;bottom:0;width:3px;background:#c98a10}
 #boardWrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-height:0}
 #board{position:relative}
+#cells{filter:drop-shadow(0 6px 0 #00000055) drop-shadow(0 0 10px #0006)}
+#board.quake{animation:quake .35s}
+@keyframes quake{20%{transform:translate(-5px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-3px,-2px)}80%{transform:translate(3px,2px)}}
 #cells,#tiles,#fx{position:absolute;inset:0}
 #tiles{overflow:hidden}
 #fx{pointer-events:none;overflow:visible}
@@ -86,6 +89,13 @@ button{font-family:inherit;cursor:pointer}
 .tile.fast{transition:transform .15s ease-in}
 .tile>*{position:absolute;inset:4%}
 .tile.pop{animation:pop .24s forwards}
+.tile.land>*:first-child{animation:land .24s ease-out;transform-origin:50% 100%}
+@keyframes land{0%{scale:1.1 .82}55%{scale:.95 1.06}100%{scale:1 1}}
+.flyR{position:absolute;left:0;top:0;transition:transform .36s linear;z-index:5;filter:drop-shadow(0 0 8px #ffe36a)}
+.flyR svg{width:100%;height:100%}
+.star{position:absolute;width:16px;height:16px;background:#fff6a0;clip-path:polygon(50% 0,61% 38%,100% 50%,61% 62%,50% 100%,39% 62%,0 50%,39% 38%);animation:part .55s ease-out forwards}
+.combo{position:absolute;left:0;right:0;top:30%;text-align:center;font-size:46px;font-weight:900;color:#fff;-webkit-text-stroke:2px #c74b14;text-shadow:0 5px 0 #c74b14,0 0 24px #ffd23a;pointer-events:none;z-index:7;animation:combo .9s forwards}
+@keyframes combo{0%{transform:scale(.3);opacity:0}25%{transform:scale(1.15);opacity:1}70%{transform:scale(1);opacity:1}100%{transform:scale(1) translateY(-30px);opacity:0}}
 .tile.born{animation:born .35s}
 .tile.nudge>*:first-child{animation:nudge .3s}
 .tile.shake>*:first-child{animation:shake .25s}
@@ -93,8 +103,9 @@ button{font-family:inherit;cursor:pointer}
 @keyframes born{0%{scale:.2}70%{scale:1.2}100%{scale:1}}
 @keyframes nudge{25%{transform:translateX(-8%)}75%{transform:translateX(8%)}}
 @keyframes shake{25%{transform:rotate(-8deg) scale(.92)}75%{transform:rotate(8deg) scale(.92)}}
-.cube{border-radius:20%;background:linear-gradient(160deg,var(--a),var(--b) 55%,var(--d));box-shadow:inset 0 -.28em 0 #0003,inset 0 .2em 0 #ffffff66,0 2px 2px #0003;font-size:calc(var(--cell)*.18);display:flex;align-items:center;justify-content:center}
-.cube svg{width:62%;height:62%}
+.cube{border-radius:17%;background:linear-gradient(170deg,var(--a) 0%,var(--b) 38%,var(--b) 70%,var(--d) 100%);box-shadow:inset 0 -.34em 0 var(--d),inset 0 .2em 0 #ffffff80,inset .16em 0 0 #ffffff33,inset -.16em 0 0 #0000001f,0 3px 3px #0005;font-size:calc(var(--cell)*.18);display:flex;align-items:center;justify-content:center}
+.cube::before{content:"";position:absolute;left:12%;right:12%;top:8%;height:26%;border-radius:40% 40% 30% 30%;background:linear-gradient(#ffffff90,#ffffff00)}
+.cube svg{width:60%;height:60%;position:relative;filter:drop-shadow(0 .08em 0 var(--d))}
 .hint{inset:auto 0 0 auto!important;width:46%;height:46%;pointer-events:none}
 .hint svg{width:100%;height:100%;filter:drop-shadow(0 1px 1px #0008)}
 .sp svg{width:100%;height:100%;filter:drop-shadow(0 2px 2px #0005)}
@@ -133,7 +144,7 @@ button{font-family:inherit;cursor:pointer}
 @keyframes lineV{0%{transform:scaleY(.05);opacity:1}60%{opacity:1}100%{transform:scaleY(1);opacity:0}}
 .fx-boom{position:absolute;border-radius:50%;background:radial-gradient(circle,#fff,#ffd23a 35%,#ff6a1a 60%,transparent 70%);animation:boom .45s forwards}
 @keyframes boom{0%{transform:scale(.1);opacity:1}100%{transform:scale(1);opacity:0}}
-.part{position:absolute;width:12px;height:12px;border-radius:3px;animation:part .5s ease-out forwards}
+.part{position:absolute;width:13px;height:13px;border-radius:3px;animation:part .55s cubic-bezier(.2,.6,.4,1) forwards;box-shadow:inset 0 -3px 0 #0003}
 @keyframes part{to{transform:translate(var(--dx),var(--dy)) rotate(200deg);opacity:0}}
 .flyer{position:fixed;font-size:28px;z-index:50;transition:all .7s cubic-bezier(.4,-0.3,.6,1);pointer-events:none;width:32px;height:32px}
 .flyer svg{width:100%;height:100%}
@@ -179,6 +190,14 @@ button{font-family:inherit;cursor:pointer}
 input[type=number]{width:100%;font-size:24px;padding:10px;border-radius:12px;border:3px solid #e1c48f;text-align:center;font-weight:900;color:#3b2a10;background:#fff;user-select:text;-webkit-user-select:text}
 #toast{position:fixed;left:50%;top:30%;transform:translateX(-50%);background:#000c;color:#fff;padding:12px 20px;border-radius:16px;font-weight:800;font-size:18px;z-index:200;pointer-events:none;transition:opacity .3s;opacity:0;text-align:center}
 #toast.show{opacity:1}
+.pre{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
+.preB{position:relative;aspect-ratio:1;border-radius:16px;border:none;background:linear-gradient(#c9d1da,#8d99a8);box-shadow:inset 0 -5px 0 #5f6b7a;display:flex;align-items:center;justify-content:center;padding:8%}
+.preB.on{background:linear-gradient(#7fdc5a,#46ad2c);box-shadow:inset 0 -5px 0 #2f8017,0 0 0 3px #fff,0 0 12px #ffd23a}
+.preB>div{position:relative;width:100%;height:100%;--cell:56px}
+.preB .n{position:absolute;right:-4px;bottom:-6px;min-width:24px;height:24px;border-radius:12px;background:#fff;color:#2f6a12;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 #0003}
+.preB .lock{background:#e33;color:#fff}
+.preGoals{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin:6px 0 4px}
+.preGoals .goal{font-size:22px}
 .help{text-align:left;font-size:16px;line-height:1.4}
 .help div{display:flex;align-items:center;gap:10px;margin:8px 0}
 .help .gi{width:36px;height:36px;--cell:36px}
@@ -228,7 +247,7 @@ const KEY='cubeboum_save_v1';
 const START_LEVEL=11482;
 const COLS=9, ROWS=11;
 const CCOL=[['#ff9a8a','#f23b3b','#b01818'],['#9ccdff','#2f86f0','#1a52aa'],['#9af08c','#2fbf3f','#1c8428'],['#fff09a','#ffc21a','#d08a00'],['#dcb4ff','#9b51f5','#6a2bc0']];
-const SYMP='fill="#ffffff8c" stroke="#00000026" stroke-width="5" stroke-linejoin="round"';
+const SYMP='fill="#ffffffd0" stroke="#00000030" stroke-width="4" stroke-linejoin="round"';
 const SYM=[
  `<svg viewBox="0 0 100 100"><polygon ${SYMP} points="50,10 62,37 91,39 68,58 76,87 50,71 24,87 32,58 9,39 38,37"/></svg>`,
  `<svg viewBox="0 0 100 100"><path ${SYMP} d="M50 10C50 10 22 45 22 62a28 28 0 0 0 56 0C78 45 50 10 50 10Z"/></svg>`,
@@ -255,10 +274,10 @@ const BOOSTERS=[
  {k:'shuffle',name:'Mélange',desc:'Mélange les cubes',ic:IC_SHUF}];
 const PRICE=20;
 
-function defSave(){return{v:1,level:START_LEVEL,coins:11,boost:{hammer:4,row:2,col:2,shuffle:3,bucket:1,paint:2},stars:{},bonusDay:'',sound:true,vibe:true,cur:null,wins:0}}
+function defSave(){return{v:1,level:START_LEVEL,coins:11,boost:{hammer:4,row:2,col:2,shuffle:3,bucket:1,paint:2},pre:{rk:3,bm:3,dc:3},stars:{},bonusDay:'',sound:true,vibe:true,cur:null,wins:0}}
 let S=null;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-if(!S||!S.v){S=defSave()}else{S=Object.assign(defSave(),S);S.boost=Object.assign(defSave().boost,S.boost)}
+if(!S||!S.v){S=defSave()}else{S=Object.assign(defSave(),S);S.boost=Object.assign(defSave().boost,S.boost);S.pre=Object.assign(defSave().pre,S.pre||{})}
 if(S.cur&&(!S.cur.grid||S.cur.grid.length!==ROWS||S.cur.ver!==2))S.cur=null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 save();
@@ -314,7 +333,12 @@ const TPL=[
  [".....",".....",".K.K.","FFFFF","S...S","S.H.S","S...S","BBBBB",".....","SS.SS","SS.SS"],
  [".....",".....","HH.HH","..B..","FFBFF","..B..","..B..","SSBSS",".....","#S.S.","#S.S."],
  [".....",".....","....K","SSSS.","....S","BBB.S","F.B.S","F...S","FHHHS",".....","#...."],
- [".....",".....","S.K.S","SSSSS",".....","BFBFB",".....","HHHHH",".....","SSSSS","....."]];
+ [".....",".....","S.K.S","SSSSS",".....","BFBFB",".....","HHHHH",".....","SSSSS","....."],
+ ["#....","#....","S.BBB","S.FFF","#HHH.","#....","S.F.F","S....","#HHHH","..BBB","#.B.#"],
+ ["##...","#....","#SBB.","..FF.","HH...","HH..#","..BBB","S....","SS...","SSFFF","#...."],
+ ["#...#",".....",".SKS.","..F..","BBFBB","#...#","#.H.#","..H..","SS.SS","SSBSS","#...#"],
+ [".....",".....","K.S..","..S..","FFS..","..S##","HHS##","..S..","BBS..","..S..","....."],
+ ["##...","#....","S..K.","SBBBB","#....","#.FF.","S.FF.","S....","#HH.H","#....","##..."]];
 
 function genLevel(L){
  const R=rng(L*7919+31);
@@ -349,7 +373,7 @@ function genLevel(L){
  let colorN=0;
  if(goals.length<4&&R()<.6){colorN=15+Math.floor(R()*16);goals.push({k:'c'+Math.floor(R()*nC),n:colorN})}
  const moves=Math.max(22,Math.min(60,Math.round(MOVE_A+hpSum*MOVE_B+colorN*.25+cnt.cage*4)));
- return{ver:2,level:L,nC,mask,grid,moves,startMoves:moves,goals,goalStart:goals.reduce((s,g)=>s+g.n,0)};
+ const gs=goals.reduce((s,g)=>s+g.n,0);return{ver:2,level:L,nC,mask,grid,moves,startMoves:moves,goals,goalStart:gs,score:0};
 }
 let MOVE_A=14,MOVE_B=.30;
 
@@ -375,16 +399,19 @@ function hitArea(res,cells){const local=new Set();
   else if(isSp(t)){if(!res.done.has(k)){res.done.add(k);res.q.push([r,c])}res.clear.add(k)}
   else res.clear.add(k)}}
 function areaSingle(t,r,c){
- if(t.t==='rh'){fxLine(r,c,'h');snd('rocket');return rowCells(r)}
- if(t.t==='rv'){fxLine(r,c,'v');snd('rocket');return colCells(c)}
- if(t.t==='bomb'){fxBoom(r,c,2.6);snd('boom');buzz(40);return square(r,c,2)}
- if(t.t==='tnt'){fxBoom(r,c,3.8);snd('boom');buzz(60);return square(r,c,3)}
+ addScore(100);
+ if(t.t==='rh'){fxLine(r,c,'h');fxRockets(r,c,'h');snd('rocket');return rowCells(r)}
+ if(t.t==='rv'){fxLine(r,c,'v');fxRockets(r,c,'v');snd('rocket');return colCells(c)}
+ if(t.t==='bomb'){fxBoom(r,c,2.6);quake();snd('boom');buzz(40);return square(r,c,2)}
+ if(t.t==='tnt'){fxBoom(r,c,3.8);quake();snd('boom');buzz(60);return square(r,c,3)}
  if(t.t==='disco'){const col=(t.c!==undefined)?t.c:mostColor();snd('disco');const cs=cubesOf(col);cs.forEach(([a,b])=>fxBoom(a,b,.7));return cs.concat([[r,c]])}
  return[]}
 function runQueue(res){let guard=0;while(res.q.length&&guard++<400){const [r,c]=res.q.shift();const t=G.grid[r][c];if(!t)continue;res.clear.add(K(r,c));hitArea(res,areaSingle(t,r,c))}}
 
 function goalDec(k,n){const g=G.goals.find(x=>x.k===k);if(!g||g.n<=0||n<=0)return;g.n=Math.max(0,g.n-n);drawGoals(k);updBar()}
-async function applyRes(res){
+function thr(){const b=(G.goalStart||20)*60+600;return[b,b*1.5,b*2.1]}
+function addScore(n){if(!G)return;G.score=(G.score||0)+n;updBar()}
+async function applyRes(res){addScore(res.hits.size*50+res.clear.size*20);
  for(const [k,n] of res.hits){const r=Math.floor(k/COLS),c=k%COLS;const t=G.grid[r][c];if(!isObs(t)||res.clear.has(k))continue;
   const dmg=Math.min(n,t.hp);
   if(t.t==='hive'){goalDec('bee',dmg);flyFx(r,c,'bee',dmg)}
@@ -431,7 +458,7 @@ async function shuffle(msg){
  banner(msg||'Mélange !');render();await sleep(500);
 }
 async function settle(){
- for(let i=0;i<8;i++){gravity();render();await sleep(300);if(!collectToys())break;await sleep(200)}
+ for(let i=0;i<8;i++){gravity();render();await sleep(lastFall*1000+60);if(!collectToys())break;await sleep(200)}
  if(!hasMove())await shuffle();hints()}
 
 /* ====================== AFFICHAGE ====================== */
@@ -451,25 +478,37 @@ function tileHTML(t){
   case 'toy':return`<div class="toy">${TOY}</div>`;
  }return''}
 const sig=t=>t.t+'|'+(t.c??'')+'|'+(t.hp??'');
+let lastFall=.3;
 function render(){
- const tl=$('tiles');const seen=new Set();
+ const tl=$('tiles');const seen=new Set();let maxFall=0;
  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const t=G.grid[r][c];if(!t)continue;seen.add(t.id);
   let el=els.get(t.id);const x=c*CELL,y=r*CELL;
   if(!el){el=document.createElement('div');el.className='tile';el.innerHTML=tileHTML(t);el._sig=sig(t);tl.appendChild(el);els.set(t.id,el);
    const sr=(t._from!==undefined)?t._from:r;delete t._from;
-   el.style.transition='none';el.style.transform=`translate(${x}px,${sr*CELL}px)`;void el.offsetWidth;el.style.transition='';
+   el.style.transition='none';el.style.transform=`translate(${x}px,${sr*CELL}px)`;void el.offsetWidth;el.style.transition='';el._y=sr*CELL;
    if(sr===r&&(isSp(t)||isToy(t)))el.classList.add('born')}
   else if(el._sig!==sig(t)){el.innerHTML=tileHTML(t);el._sig=sig(t);el._h=undefined}
   el.classList.remove('fast');
+  const py=el._y;el._y=y;
+  if(!FAST&&py!==undefined&&y>py){const d=(y-py)/CELL;const dur=Math.min(.6,.14+.075*d);el.style.transitionDuration=dur+'s';el.style.transitionTimingFunction='cubic-bezier(.42,0,.92,.65)';maxFall=Math.max(maxFall,dur);
+   clearTimeout(el._lt);el._lt=setTimeout(()=>{el.classList.remove('land');void el.offsetWidth;el.classList.add('land')},dur*1000)}
+  else{el.style.transitionDuration='';el.style.transitionTimingFunction=''}
   el.style.transform=`translate(${x}px,${y}px)`}
+ lastFall=maxFall||.12;
  for(const [id,el] of els)if(!seen.has(id)){el.remove();els.delete(id)}
 }
 function popEl(t,r,c,parts){const el=els.get(t.id);if(!el)return;els.delete(t.id);el.classList.add('pop');setTimeout(()=>el.remove(),260);
- if(parts&&isCube(t)&&!FAST){for(let i=0;i<3;i++){const p=document.createElement('div');p.className='part';p.style.background=CCOL[t.c][1];p.style.left=(c*CELL+CELL/2-6)+'px';p.style.top=(r*CELL+CELL/2-6)+'px';const a=Math.random()*6.28,d=CELL*(.6+Math.random()*.8);p.style.setProperty('--dx',Math.cos(a)*d+'px');p.style.setProperty('--dy',Math.sin(a)*d+'px');$('fx').appendChild(p);setTimeout(()=>p.remove(),520)}}}
+ if(parts&&isCube(t)&&!FAST){if(Math.random()<.35){const s=document.createElement('div');s.className='star';s.style.left=(c*CELL+CELL/2-8)+'px';s.style.top=(r*CELL+CELL/2-8)+'px';s.style.setProperty('--dx',(Math.random()-.5)*CELL*2+'px');s.style.setProperty('--dy',-(CELL*(.8+Math.random()))+'px');$('fx').appendChild(s);setTimeout(()=>s.remove(),580)}for(let i=0;i<5;i++){const p=document.createElement('div');p.className='part';p.style.background=CCOL[t.c][1];p.style.left=(c*CELL+CELL/2-6)+'px';p.style.top=(r*CELL+CELL/2-6)+'px';const a=Math.random()*6.28,d=CELL*(.6+Math.random()*.8);p.style.setProperty('--dx',Math.cos(a)*d+'px');p.style.setProperty('--dy',Math.sin(a)*d+'px');$('fx').appendChild(p);setTimeout(()=>p.remove(),520)}}}
 function fxLine(r,c,dir){if(FAST)return;const d=document.createElement('div');d.className='fx-line '+dir;
  if(dir==='h'){d.style.left='0';d.style.width=COLS*CELL+'px';d.style.top=(r*CELL+CELL*.2)+'px';d.style.height=CELL*.6+'px';d.style.transformOrigin=(c*CELL+CELL/2)+'px 50%'}
  else{d.style.top='0';d.style.height=ROWS*CELL+'px';d.style.left=(c*CELL+CELL*.2)+'px';d.style.width=CELL*.6+'px';d.style.transformOrigin='50% '+(r*CELL+CELL/2)+'px'}
  $('fx').appendChild(d);setTimeout(()=>d.remove(),460)}
+function fxRockets(r,c,dir){if(FAST)return;const fx=$('fx');
+ for(const s of [-1,1]){const d=document.createElement('div');d.className='flyR';d.innerHTML=ROCKET;d.style.width=d.style.height=CELL+'px';
+  const rot=dir==='h'?(s<0?180:0):(s<0?-90:90);const x=c*CELL,y=r*CELL;d.style.transform=`translate(${x}px,${y}px) rotate(${rot}deg)`;fx.appendChild(d);void d.offsetWidth;
+  const tx=dir==='h'?(s<0?-CELL:COLS*CELL):x,ty=dir==='h'?y:(s<0?-CELL:ROWS*CELL);d.style.transform=`translate(${tx}px,${ty}px) rotate(${rot}deg)`;setTimeout(()=>d.remove(),420)}}
+function quake(){if(FAST)return;const b=$('board');b.classList.remove('quake');void b.offsetWidth;b.classList.add('quake')}
+function comboTxt(t){if(FAST)return;const d=document.createElement('div');d.className='combo';d.textContent=t;$('boardWrap').appendChild(d);setTimeout(()=>d.remove(),950)}
 function fxBoom(r,c,rad){if(FAST)return;const d=document.createElement('div');d.className='fx-boom';const s=rad*2*CELL;d.style.width=d.style.height=s+'px';d.style.left=(c*CELL+CELL/2-s/2)+'px';d.style.top=(r*CELL+CELL/2-s/2)+'px';$('fx').appendChild(d);setTimeout(()=>d.remove(),470)}
 function flyFx(r,c,k,n){if(FAST)return;const g=document.querySelector(`.goal[data-k="${k}"]`);if(!g)return;const br=$('board').getBoundingClientRect(),gr=g.getBoundingClientRect();
  const html=k==='bee'?'🐝':k==='bag'?'💰':TOY;
@@ -488,7 +527,7 @@ function drawCells(){const ce=$('cells');ce.innerHTML='';const B=Math.max(2,Math
   if(!m(r-1,c))d.style.borderTopWidth=B;if(!m(r+1,c))d.style.borderBottomWidth=B;if(!m(r,c-1))d.style.borderLeftWidth=B;if(!m(r,c+1))d.style.borderRightWidth=B;
   ce.appendChild(d)}}
 function layout(){if(!G)return;const w=$('boardWrap');const W=w.clientWidth-6,H=w.clientHeight-8;CELL=Math.max(20,Math.floor(Math.min(W/COLS,H/ROWS)));
- const b=$('board');b.style.width=COLS*CELL+'px';b.style.height=ROWS*CELL+'px';b.style.setProperty('--cell',CELL+'px');drawCells();
+ for(const el of els.values())el._y=undefined;const b=$('board');b.style.width=COLS*CELL+'px';b.style.height=ROWS*CELL+'px';b.style.setProperty('--cell',CELL+'px');drawCells();
  for(const el of els.values())el.style.transition='none';render();void $('tiles').offsetWidth;for(const el of els.values())el.style.transition=''}
 function goalIcon(k){
  if(k==='bee')return'<span class="emo">🐝</span>';if(k==='bag')return'<span class="emo">💰</span>';if(k==='toy')return TOY;
@@ -499,13 +538,13 @@ function drawGoals(bumpK){if(FAST&&bumpK)return;const g=$('goals');
  if(!bumpK||g.children.length!==G.goals.length){g.innerHTML=G.goals.map(x=>`<div class="goal" data-k="${x.k}"><div class="gi">${goalIcon(x.k)}</div><span class="cnt">${x.n>0?x.n:'<span class="ok">✔</span>'}</span></div>`).join('');g.style.gridTemplateColumns=G.goals.length===1?'1fr':'1fr 1fr';return}
  const x=G.goals.find(q=>q.k===bumpK);const el=g.querySelector(`.goal[data-k="${bumpK}"]`);if(!x||!el)return;el.querySelector('.cnt').innerHTML=x.n>0?x.n:'<span class="ok">✔</span>';el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump')}
 function updMoves(){$('moves').textContent=Math.max(0,G.moves);$('movesBox').classList.toggle('low',G.moves<=5&&!G.over)}
-function updBar(){if(!G)return;const left=G.goals.reduce((s,g)=>s+g.n,0);const p=G.goalStart?1-left/G.goalStart:1;$('barFill').style.width=Math.round(p*100)+'%'}
+function updBar(){if(!G||FAST)return;const t=thr();$('barFill').style.width=Math.min(100,Math.round((G.score||0)/t[2]*100))+'%';const ss=document.querySelectorAll('#movesBox .bar s');if(ss.length===2){ss[0].style.left=(t[0]/t[2]*100)+'%';ss[1].style.left=(t[1]/t[2]*100)+'%'}}
 function drawBoosters(){$('bbar').innerHTML=`<button class="bst gear" id="bPause" aria-label="Pause">⚙️</button>`+BOOSTERS.map(b=>{const n=S.boost[b.k]||0;return`<button class="bst${G&&G.booster===b.k?' on':''}" data-b="${b.k}">${b.ic}<span class="n${n?'':' plus'}">${n||'+'}</span></button>`}).join('');
  $('bPause').onclick=pauseMenu;document.querySelectorAll('.bst[data-b]').forEach(e=>e.onclick=()=>boosterTap(e.dataset.b))}
 function tip(t){const e=$('tip');if(t){e.textContent=t;e.classList.remove('hidden')}else e.classList.add('hidden')}
 
 /* ====================== ACTIONS ====================== */
-function saveCur(){if(!G||G.over)return;const grid=G.grid.map(row=>row.map(t=>t?{id:t.id,t:t.t,c:t.c,hp:t.hp}:null));S.cur={ver:2,level:G.level,nC:G.nC,mask:G.mask,grid,moves:G.moves,startMoves:G.startMoves,goals:G.goals,goalStart:G.goalStart};save()}
+function saveCur(){if(!G||G.over)return;const grid=G.grid.map(row=>row.map(t=>t?{id:t.id,t:t.t,c:t.c,hp:t.hp}:null));S.cur={ver:2,level:G.level,nC:G.nC,mask:G.mask,grid,moves:G.moves,startMoves:G.startMoves,goals:G.goals,goalStart:G.goalStart,score:G.score||0};save()}
 function boardTap(ev){if(!G||G.busy||G.over)return;const br=$('board').getBoundingClientRect();const c=Math.floor((ev.clientX-br.left)/CELL),r=Math.floor((ev.clientY-br.top)/CELL);playAt(r,c)}
 function playAt(r,c){if(!G||G.busy||G.over||!inB(r,c))return;const t=G.grid[r][c];if(!t)return;
  if(G.booster)return useBooster(r,c);
@@ -518,6 +557,7 @@ async function tapCube(r,c){
  G.busy=true;G.moves--;updMoves();buzz(15);
  const res=newRes();const n=grp.length;const col=G.grid[r][c].c;let sp=null;
  if(n>=9)sp=mk('disco',{c:col});else if(n>=7)sp=mk('bomb');else if(n>=5)sp=mk(Math.random()<.5?'rh':'rv');
+ if(n>=9)comboTxt('Génial !');else if(n>=7)comboTxt('Super !');else if(n>=5)comboTxt('Bien !');addScore(n>=5?n*15:0);
  const adj=new Set();
  for(const [a,b] of grp){res.clear.add(K(a,b));for(const [dr,dc] of N4){const a2=a+dr,b2=b+dc;if(inB(a2,b2)&&isObs(G.grid[a2][b2]))adj.add(K(a2,b2))}}
  for(const k of adj)res.hits.set(k,1);
@@ -535,6 +575,7 @@ async function tapSpecial(r,c){
   const disco=ts.find(t=>t.t==='disco');
   for(const [a,b] of grp){const k=K(a,b);res.done.add(k);res.clear.add(k);const el=els.get(G.grid[a][b].id);if(el&&!FAST){el.classList.add('fast');el.style.transform=`translate(${c*CELL}px,${r*CELL}px)`}}
   await sleep(180);
+  comboTxt(nD>=2?'Incroyable !':'Méga combo !');addScore(500);
   if(nD>=2){fxBoom(r,c,9);snd('boom');snd('disco');buzz(120);hitArea(res,allCells())}
   else if(nD===1&&(nB||nR)){
    const col=(disco.c!==undefined)?disco.c:mostColor();const targets=cubesOf(col);snd('disco');
@@ -579,25 +620,25 @@ async function win(){
  if(!FAST){$('mascot').classList.add('happy');setTimeout(()=>$('mascot').classList.remove('happy'),1100)}
  await sleep(1000);
  const left=G.moves;const bonus=FAST?0:Math.min(left,15);
- for(let i=0;i<bonus;i++){const cs=allCells().filter(([a,b])=>isCube(G.grid[a][b]));if(!cs.length)break;const [a,b]=cs[Math.floor(Math.random()*cs.length)];const t=G.grid[a][b];t.t=Math.random()<.5?'rh':'rv';delete t.c;G.moves--;updMoves();render();const el=els.get(t.id);if(el){el.classList.remove('born');void el.offsetWidth;el.classList.add('born')}snd('coin');await sleep(110)}
+ for(let i=0;i<bonus;i++){const cs=allCells().filter(([a,b])=>isCube(G.grid[a][b]));if(!cs.length)break;const [a,b]=cs[Math.floor(Math.random()*cs.length)];const t=G.grid[a][b];t.t=Math.random()<.5?'rh':'rv';delete t.c;G.moves--;updMoves();render();const el=els.get(t.id);if(el){el.classList.remove('born');void el.offsetWidth;el.classList.add('born')}snd('coin');addScore(200);await sleep(110)}
  let guard=0;
  while(!FAST&&guard++<40){let found=null;for(let r=0;r<ROWS&&!found;r++)for(let c=0;c<COLS;c++)if(isSp(G.grid[r][c])){found=[r,c];break}if(!found)break;
   const res=newRes();res.done.add(K(...found));res.q.push(found);runQueue(res);await applyRes(res);gravity();render();await sleep(250)}
- const coins=5+left;const ratio=left/G.startMoves;const stars=ratio>=.3?3:ratio>=.12?2:1;
+ const coins=5+left;const t=thr();const sc=G.score||0;const stars=sc>=t[2]?3:sc>=t[1]?2:1;
  const L=G.level;
  if(FAST){G.result={win:true,left};return}
  S.stars[L]=Math.max(S.stars[L]||0,stars);S.level=Math.max(S.level,L+1);S.coins+=coins;S.cur=null;S.wins=(S.wins||0)+1;save();
  modal(`<h2>Niveau ${L} réussi !</h2><div class="stars">${[1,2,3].map(i=>`<span class="${i<=stars?'':'off'}">⭐</span>`).join('')}</div>
- <p>+${coins} pièces <span class="coin" style="vertical-align:middle"></span></p>
+ <p>Score : <b>${(G.score||0).toLocaleString('fr-FR')}</b><br>+${coins} pièces <span class="coin" style="vertical-align:middle"></span></p>
  <button class="btn" id="mNext">Niveau suivant</button><button class="btn blue" id="mMap">Carte</button>`);
- $('mNext').onclick=()=>{closeModal();startLevel(S.level)};$('mMap').onclick=()=>{closeModal();showMap()}}
+ $('mNext').onclick=()=>{closeModal();showMap();preLevel(S.level)};$('mMap').onclick=()=>{closeModal();showMap()}}
 function lose(){if(FAST){G.result={win:false,left:G.goals.reduce((s,g)=>s+g.n,0)};return}
  snd('lose');const rest=G.goals.filter(g=>g.n>0).map(g=>`<span class="goal" style="display:inline-flex;margin:0 6px"><span class="gi">${goalIcon(g.k)}</span>${g.n}</span>`).join('');
  modal(`<h2>Plus de coups !</h2><p>Il reste :</p><div style="font-size:22px;font-weight:900;margin-bottom:8px">${rest}</div>
  <button class="btn" id="m5" ${S.coins<10?'disabled':''}>+5 coups (10 🪙)</button>
  <button class="btn blue" id="mRe">Rejouer (vies illimitées)</button><button class="btn grey" id="mMap">Carte</button>`);
  $('m5').onclick=()=>{if(S.coins<10)return;S.coins-=10;G.moves+=5;save();updMoves();saveCur();closeModal();snd('coin')};
- $('mRe').onclick=()=>{closeModal();S.cur=null;save();startLevel(G.level)};
+ $('mRe').onclick=()=>{closeModal();S.cur=null;save();const L=G.level;showMap();preLevel(L)};
  $('mMap').onclick=()=>{closeModal();S.cur=null;save();showMap()}}
 function pauseMenu(){if(!G)return;
  modal(`<h2>Pause</h2><button class="btn" id="mGo">Reprendre</button><button class="btn blue" id="mHelp">Règles du jeu</button><button class="btn blue" id="mRe">Recommencer le niveau</button><button class="btn grey" id="mMap">Retour à la carte</button><p style="font-size:14px;margin-top:14px">Ta partie est sauvegardée automatiquement.</p>`);
@@ -606,12 +647,30 @@ function pauseMenu(){if(!G)return;
  $('mMap').onclick=()=>{closeModal();showMap()}}
 
 /* ====================== ÉCRANS ====================== */
-function startLevel(L){
+const PRE=[{k:'rk',name:'2 fusées',html:()=>`<div class="sp" style="position:absolute;inset:0">${ROCKET}</div>`},{k:'bm',name:'Bombe',html:()=>`<div class="sp" style="position:absolute;inset:0">${BOMB}</div>`},{k:'dc',name:'Boule arc-en-ciel',html:()=>'<div class="disco" style="position:absolute;inset:6%"></div>'}];
+function preLevel(L){
+ if(S.cur&&S.cur.level===L&&S.cur.ver===2)return startLevel(L);
+ const g=genLevel(L);nid=1;const pick={};
+ const draw=()=>{modal(`<h2>Niveau ${L}</h2><p style="margin:0">Objectif :</p><div class="preGoals">${g.goals.map(x=>`<span class="goal"><span class="gi">${goalIcon(x.k)}</span>${x.n}</span>`).join('')}</div>
+ <p style="margin:8px 0 0;font-size:16px">Bonus de départ :</p>
+ <div class="pre"><button class="preB on" disabled><div><div class="tnt" style="position:absolute;inset:4%"><span style="font-size:14px">TNT</span></div></div><span class="n lock">✓</span></button>
+ ${PRE.map(b=>`<button class="preB${pick[b.k]?' on':''}" data-k="${b.k}"><div>${b.html()}</div><span class="n${S.pre[b.k]?'':' plus'}">${pick[b.k]?'✓':(S.pre[b.k]||'+')}</span></button>`).join('')}</div>
+ <p style="font-size:14px;margin:0">TNT toujours activée. Touche un bonus pour l'ajouter.</p>
+ <button class="btn" id="pGo">Jouer</button><button class="btn grey" id="pNo">Retour</button>`);
+  document.querySelectorAll('.preB[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(pick[k]){pick[k]=0;draw();return}
+   if(!(S.pre[k]>0)){if(S.coins<PRICE){toast(`Il faut ${PRICE} pièces`);return}S.coins-=PRICE;S.pre[k]=(S.pre[k]||0)+1;save();snd('coin');toast(`Acheté pour ${PRICE} pièces`)}
+   pick[k]=1;draw()});
+  $('pGo').onclick=()=>{closeModal();for(const k in pick)if(pick[k])S.pre[k]=Math.max(0,(S.pre[k]||0)-1);save();startLevel(L,pick)};$('pNo').onclick=()=>{closeModal();if(G)showMap()}};
+ draw()}
+function startLevel(L,pick){
  els.forEach(e=>e.remove());els.clear();$('fx').innerHTML='';
  let resumed=false;
  if(S.cur&&S.cur.level===L&&S.cur.ver===2){const c=S.cur;let mx=0;const grid=c.grid.map(row=>row.map(t=>{if(!t)return null;const o={id:t.id,t:t.t};if(t.c!==undefined&&t.c!==null)o.c=t.c;if(t.hp!==undefined&&t.hp!==null)o.hp=t.hp;mx=Math.max(mx,t.id);return o}));nid=mx+1;
-  G={ver:2,level:L,nC:c.nC,mask:c.mask,grid,moves:c.moves,startMoves:c.startMoves,goals:c.goals,goalStart:c.goalStart||c.goals.reduce((s,g)=>s+g.n,0)};resumed=c.moves<c.startMoves}
- else{G=genLevel(L);S.cur=null}
+  G={ver:2,level:L,nC:c.nC,mask:c.mask,grid,moves:c.moves,startMoves:c.startMoves,goals:c.goals,goalStart:c.goalStart||c.goals.reduce((s,g)=>s+g.n,0),score:c.score||0};resumed=c.moves<c.startMoves}
+ else{G=genLevel(L);S.cur=null;
+  if(pick){const cand=[];for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(isCube(G.grid[r][c]))cand.push([r,c]);
+   const put=t=>{if(!cand.length)return;const i=Math.floor(Math.random()*Math.min(cand.length,24));const [r,c]=cand.splice(i,1)[0];G.grid[r][c]=mk(t)};
+   if(pick.rk){put('rh');put('rv')}if(pick.bm)put('bomb');if(pick.dc){put('disco')}}}
  G.busy=false;G.over=false;G.booster=null;
  $('map').classList.add('hidden');$('game').classList.remove('hidden');
  $('lvlNum').textContent=L;$('mascotFace').innerHTML=MASCOT;drawGoals();updMoves();updBar();drawBoosters();tip('');
@@ -629,7 +688,7 @@ function renderMap(){
  for(const [x,y,lv] of pts){const cls=lv<L?'done':lv===L?'cur':'lock';const st=lv<L?'⭐'.repeat(S.stars[lv]||3):'';
   h+=`<button class="node ${cls}" style="left:${x}px;top:${y}px" data-lv="${lv}">${lv===L?'▶':''}${st?`<span class="st">${st}</span>`:''}<span class="lbl">${lv}</span></button>`}
  p.innerHTML=h;
- p.querySelectorAll('.node.cur').forEach(b=>b.onclick=()=>startLevel(S.level));
+ p.querySelectorAll('.node.cur').forEach(b=>b.onclick=()=>preLevel(S.level));
  const cur=pts.find(q=>q[2]===L);requestAnimationFrame(()=>{$('mapScroll').scrollTop=cur[1]-$('mapScroll').clientHeight/2})}
 
 /* ====================== FENÊTRES ====================== */
@@ -664,8 +723,9 @@ function bonusMenu(){
   setTimeout(()=>{document.querySelectorAll('.card').forEach(o=>{if(o===cd)return;o.classList.add('rev','dim');o.innerHTML=lab(pool[+o.dataset.i])});$('bTxt').textContent='Reviens demain pour une autre récompense !';$('bOk').classList.remove('hidden')},600)});
  $('bOk').onclick=()=>{closeModal();renderMap()}}
 function shopMenu(){
- const draw=()=>{modal(`<h2>Boutique</h2><p style="margin:0 0 6px">Tu as <b>${S.coins}</b> <span class="coin" style="vertical-align:middle;width:20px;height:20px"></span></p>`+BOOSTERS.map(b=>`<div class="shopRow"><div class="ico">${b.ic}</div><div class="txt">${b.name} <small>${b.desc} — tu en as ${S.boost[b.k]||0}</small></div><button data-k="${b.k}" ${S.coins<PRICE?'disabled style="opacity:.45"':''}>${PRICE} 🪙</button></div>`).join('')+`<button class="btn blue" id="sOk">Fermer</button>`);
-  document.querySelectorAll('.shopRow button').forEach(b=>b.onclick=()=>{if(S.coins<PRICE)return;S.coins-=PRICE;S.boost[b.dataset.k]=(S.boost[b.dataset.k]||0)+1;save();snd('coin');draw()});
+ const draw=()=>{modal(`<h2>Boutique</h2><p style="margin:0 0 6px">Tu as <b>${S.coins}</b> <span class="coin" style="vertical-align:middle;width:20px;height:20px"></span></p>`+BOOSTERS.map(b=>`<div class="shopRow"><div class="ico">${b.ic}</div><div class="txt">${b.name} <small>${b.desc} — tu en as ${S.boost[b.k]||0}</small></div><button data-k="${b.k}" ${S.coins<PRICE?'disabled style="opacity:.45"':''}>${PRICE} 🪙</button></div>`).join('')+PRE.map(b=>`<div class="shopRow"><div class="ico" style="position:relative">${b.html()}</div><div class="txt">${b.name} <small>Bonus de départ — tu en as ${S.pre[b.k]||0}</small></div><button data-p="${b.k}" ${S.coins<PRICE?'disabled style="opacity:.45"':''}>${PRICE} 🪙</button></div>`).join('')+`<button class="btn blue" id="sOk">Fermer</button>`);
+  document.querySelectorAll('.shopRow button[data-p]').forEach(b=>b.onclick=()=>{if(S.coins<PRICE)return;S.coins-=PRICE;S.pre[b.dataset.p]=(S.pre[b.dataset.p]||0)+1;save();snd('coin');draw()});
+  document.querySelectorAll('.shopRow button[data-k]').forEach(b=>b.onclick=()=>{if(S.coins<PRICE)return;S.coins-=PRICE;S.boost[b.dataset.k]=(S.boost[b.dataset.k]||0)+1;save();snd('coin');draw()});
   $('sOk').onclick=()=>{closeModal();renderMap()}};draw()}
 function settingsMenu(){
  const draw=()=>{modal(`<h2>Réglages</h2>
@@ -690,7 +750,7 @@ $('fileIn').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)retur
 
 /* ====================== DÉMARRAGE ====================== */
 $('board').addEventListener('pointerdown',boardTap);
-$('btnPlay').onclick=()=>startLevel(S.level);
+$('btnPlay').onclick=()=>preLevel(S.level);
 $('btnBonus').onclick=bonusMenu;$('btnShop').onclick=shopMenu;$('btnSettings').onclick=settingsMenu;$('btnHelp').onclick=helpMenu;
 $('modal').addEventListener('pointerdown',e=>{if(e.target===$('modal')&&!G?.over)closeModal()});
 window.addEventListener('resize',()=>{if(G)layout();else renderMap()});
