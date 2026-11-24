@@ -468,7 +468,7 @@ $('hand').addEventListener('pointerdown',e=>{const el=e.target.closest('.card');
  drag={id:+el.dataset.id,el,x:e.clientX,y:e.clientY,on:false}});
 document.addEventListener('pointermove',e=>{if(!drag)return;
  if(!drag.on){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<10)return;drag.on=true;
-  const r=drag.el.getBoundingClientRect();drag.ox=drag.x-r.left;drag.oy=drag.y-r.top;
+  const r=drag.el.getBoundingClientRect();drag.ox=drag.fromPile?r.width/2:drag.x-r.left;drag.oy=drag.fromPile?r.height/2:drag.y-r.top;
   const g=drag.el.cloneNode(true);g.classList.remove('sel','new','must');
   g.style.cssText=`position:fixed;left:0;top:0;margin:0;width:${r.width}px;height:${r.height}px;z-index:150;pointer-events:none;transform:rotate(4deg) scale(1.08);box-shadow:0 12px 22px #0009;--w:${r.width}px`;
   document.body.appendChild(g);drag.g=g;drag.el.style.opacity='.3'}
@@ -480,10 +480,10 @@ document.addEventListener('pointermove',e=>{if(!drag)return;
    if(before!==drag.el.nextSibling&&before!==drag.el)$('hand').insertBefore(drag.el,before)}}
  else if(myPlay()){const t=dropTarget(e.clientX,e.clientY);if(t)t.el.classList.add('hov')}});
 function endDrag(e,cancel){if(!drag)return;const d=drag;drag=null;clearHov();
- if(!d.on){if(!cancel)toggleSel(d.id);return}
+ if(!d.on){if(!cancel&&!d.fromPile)toggleSel(d.id);return}
  d.g.remove();d.el.style.opacity='';const p=me();
  const t=cancel?null:dropTarget(e.clientX,e.clientY);
- if(t&&myPlay()&&e.clientY<$('hand').getBoundingClientRect().top-20){
+ if(t&&myPlay()&&!d.fromPile&&e.clientY<$('hand').getBoundingClientRect().top-20){
   if(t.k==='meld'){if(!sel.includes(d.id))sel=[d.id];tapMeld(+t.el.dataset.m,t.el.dataset.p==='1');return}
   if(t.k==='def'){sel=[d.id];humanDiscard();if(G.cur===0)render();return}
   if(t.k==='table'){if(sel.includes(d.id)&&sel.length>=3){humanPose();return}toast('Choisis au moins 3 cartes (touche-les), puis glisse-les sur la table ou touche « Poser ».');render();return}}
@@ -578,7 +578,18 @@ function show(s){curScreen=s;['home','game','opts','rules','scores'].forEach(x=>
  if(s==='opts')renderOpts();if(s==='rules')renderRules();if(s==='scores')$('scoreTxt').innerHTML=scoreTable()}
 $('hNew').onclick=()=>{if(G&&!G.over)confirmBox('Abandonner la partie en cours et en commencer une nouvelle ?',()=>{newGame();show('game')},'Nouvelle partie');else{newGame();show('game')}};
 $('hCont').onclick=()=>show('game');
-$('pio').onclick=tapPio;$('def').onclick=tapDef;
+let skipClick=false;
+$('pio').onclick=()=>{if(skipClick){skipClick=false;return}tapPio()};$('def').onclick=()=>{if(skipClick){skipClick=false;return}tapDef()};
+/* prendre une carte et la glisser directement à la place voulue dans la main */
+function pileDown(e,fromDef){if(!G||G.cur!==0||G.phase!=='draw')return;
+ const before=me().hand.length;if(fromDef)tapDef();else tapPio();
+ if(me().hand.length===before||G.phase!=='play')return;
+ skipClick=true;setTimeout(()=>skipClick=false,800);
+ const id=fromDef?me().hand[0]:me().hand[me().hand.length-1];
+ const el=[...$('hand').children].find(c=>+c.dataset.id===id);if(!el)return;
+ drag={id,el,x:e.clientX,y:e.clientY,on:false,fromPile:true};e.preventDefault()}
+$('def').addEventListener('pointerdown',e=>pileDown(e,true));
+$('pio').addEventListener('pointerdown',e=>pileDown(e,false));
 document.querySelectorAll('[data-menu]').forEach(b=>b.onclick=()=>$('drawer').classList.remove('hidden'));
 $('drawer').onclick=e=>{if(e.target===$('drawer'))$('drawer').classList.add('hidden')};
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
@@ -631,6 +642,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 <h3>Le jeu</h3><p>${o.decks} paquet${o.decks>1?'s':''} de 52 cartes + ${o.jokers} joker${o.jokers>1?'s':''}. Chaque joueur reçoit ${o.cards} cartes. Une carte est retournée pour commencer la défausse.</p>
 <h3>Un tour</h3><ol><li><b>Piocher</b> : touche la pioche, ou la carte du dessus de la défausse.${o.mustUseDef?' Si tu prends la défausse, tu dois poser cette carte pendant le tour.':''}${o.noDefOne?' Avec une seule carte en main, la défausse est interdite.':''}</li>
 <li><b>Poser</b> (si tu peux) : choisis tes cartes puis touche « Poser ». Tu peux choisir plusieurs combinaisons à la fois (ex. un brelan + une suite) : elles sont toutes posées d'un coup. Pour compléter une combinaison déjà posée, choisis tes cartes puis touche la combinaison.</li>
+<li><b>Prendre une carte</b> : touche la pioche ou la défausse. La carte de la défausse arrive à gauche de ta main, celle de la pioche à droite. Tu peux aussi garder le doigt dessus et la glisser directement à la place voulue dans ta main.</li>
 <li><b>Ranger tes cartes</b> : fais glisser une carte avec le doigt pour la déplacer dans ta main (pour regrouper tes suites et tes séries). Tu peux aussi la glisser sur une combinaison posée ou sur la défausse.</li>
 <li><b>Défausser</b> : choisis une carte puis touche « Défausser » (ou touche la défausse).</li></ol>
 <h3>Les combinaisons</h3><ul><li><b>Série</b> : 3 ou 4 cartes de même valeur, de couleurs différentes (ex. 8♠ 8♥ 8♣).</li><li><b>Suite</b> : au moins 3 cartes qui se suivent, de même couleur (ex. 4♥ 5♥ 6♥). L'As se place avant le 2 ou après le Roi.</li><li>Le <b>joker</b> remplace n'importe quelle carte${o.oneJoker?' (un seul par combinaison)':''}.</li></ul>
@@ -643,7 +655,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795547259';let updShown=false;
+const BUILD='1795547472';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
