@@ -404,11 +404,17 @@ function tapDef(){if(!G||G.cur!==0)return;
  const pre=snapshot();const id=G.def.pop();p.hand.push(id);G.took=G.o.mustUseDef?id:null;G.lastDrawn=id;G.phase='play';G.snap=pre;snd('card');
  if(G.o.mustUseDef)toast(`Tu dois poser le ${cname(G.C[id])} pendant ce tour.`);save();render()}
 function toggleSel(id){if(!G||G.cur!==0||G.phase!=='play')return;const i=sel.indexOf(id);if(i>=0)sel.splice(i,1);else sel.push(id);render()}
+function splitSel(ids){const a=analyze(ids);if(a)return[a];if(ids.length<6)return null;
+ const s=findMelds(ids,'cards',null,ids.length);return s&&s.used.size===ids.length?s.melds:null}
 function humanPose(){if(!myPlay())return;const p=me();
- const a=analyze(sel);if(!a){toast(whyBad(sel));snd('bad');return}
+ const ms=splitSel(sel);
+ if(!ms){if(sel.length>=6){const s=findMelds(sel,'cards',null,sel.length);
+   if(s){const left=sel.filter(id=>!s.used.has(id));toast(`Ces cartes ne vont dans aucune combinaison : ${left.map(id=>cname(G.C[id])).join(', ')}. Enlève-les de ta sélection.`,3500);sel=left.length<sel.length?sel:sel;snd('bad');return}}
+  toast(whyBad(sel));snd('bad');return}
  const rem=p.hand.length-sel.length;if(G.o.finishDiscard&&rem<1){toast('Garde une carte pour la défausser à la fin.');snd('bad');return}
- const m=Object.assign({id:++G.mid,owner:0},a);p.hand=p.hand.filter(id=>!a.ids.includes(id));
- if(p.posed)G.melds.push(m);else G.pending.push(m);
+ for(const a of ms){const m=Object.assign({id:++G.mid,owner:0},a);p.hand=p.hand.filter(id=>!a.ids.includes(id));
+  if(p.posed)G.melds.push(m);else G.pending.push(m)}
+ if(ms.length>1)toast(`${ms.length} combinaisons posées d'un coup !`);
  sel=[];snd('pose');afterHumanAct()}
 function commitPending(){const p=me();for(const m of G.pending)G.melds.push(m);G.pending=[];p.posed=true}
 function humanValidate(){if(!myPlay()||!G.pending.length)return;
@@ -526,7 +532,8 @@ function render(){if(!G||FAST)return;layout();const o=G.o,cur=G.players[G.cur];
  else if(G.cur!==0)st=`${esc(cur.name)} joue…`;
  else if(G.phase==='draw')st='À toi ! Pioche une carte (pioche ou défausse).';
  else{
-  if(sel.length){const a=analyze(sel);st=a?`${a.type==='run'?'Suite':'Série'} : ${a.value} pts ✓`:`${sel.length} carte${sel.length>1?'s':''} choisie${sel.length>1?'s':''}`}
+  if(sel.length){const a=analyze(sel);const ms=a?null:(sel.length>=6?splitSel(sel):null);
+   st=a?`${a.type==='run'?'Suite':'Série'} : ${a.value} pts ✓`:ms?`${ms.length} combinaisons : ${ms.reduce((t,m)=>t+m.value,0)} pts ✓`:`${sel.length} carte${sel.length>1?'s':''} choisie${sel.length>1?'s':''}`}
   else if(!p.posed&&G.pending.length)st=`Première pose : ${G.pending.reduce((s,m)=>s+m.value,0)} / ${o.firstPts} pts`;
   else if(!p.posed)st=`Pose tes combinaisons (${o.firstPts} pts pour la 1re pose), puis défausse une carte.`;
   else st='Pose ou complète des combinaisons, puis défausse une carte.'}
@@ -621,7 +628,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 <h3>Le but</h3><p>Se débarrasser de toutes ses cartes en posant des combinaisons. Chaque donne, les points des cartes qui restent en main s'ajoutent : le joueur qui a le <b>moins de points</b> quand quelqu'un atteint ${o.limit} gagne la partie.</p>
 <h3>Le jeu</h3><p>${o.decks} paquet${o.decks>1?'s':''} de 52 cartes + ${o.jokers} joker${o.jokers>1?'s':''}. Chaque joueur reçoit ${o.cards} cartes. Une carte est retournée pour commencer la défausse.</p>
 <h3>Un tour</h3><ol><li><b>Piocher</b> : touche la pioche, ou la carte du dessus de la défausse.${o.mustUseDef?' Si tu prends la défausse, tu dois poser cette carte pendant le tour.':''}${o.noDefOne?' Avec une seule carte en main, la défausse est interdite.':''}</li>
-<li><b>Poser</b> (si tu peux) : choisis tes cartes puis touche « Poser ». Pour compléter une combinaison déjà posée, choisis tes cartes puis touche la combinaison.</li>
+<li><b>Poser</b> (si tu peux) : choisis tes cartes puis touche « Poser ». Tu peux choisir plusieurs combinaisons à la fois (ex. un brelan + une suite) : elles sont toutes posées d'un coup. Pour compléter une combinaison déjà posée, choisis tes cartes puis touche la combinaison.</li>
 <li><b>Ranger tes cartes</b> : fais glisser une carte avec le doigt pour la déplacer dans ta main (pour regrouper tes suites et tes séries). Tu peux aussi la glisser sur une combinaison posée ou sur la défausse.</li>
 <li><b>Défausser</b> : choisis une carte puis touche « Défausser » (ou touche la défausse).</li></ol>
 <h3>Les combinaisons</h3><ul><li><b>Série</b> : 3 ou 4 cartes de même valeur, de couleurs différentes (ex. 8♠ 8♥ 8♣).</li><li><b>Suite</b> : au moins 3 cartes qui se suivent, de même couleur (ex. 4♥ 5♥ 6♥). L'As se place avant le 2 ou après le Roi.</li><li>Le <b>joker</b> remplace n'importe quelle carte${o.oneJoker?' (un seul par combinaison)':''}.</li></ul>
@@ -634,7 +641,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795546181';let updShown=false;
+const BUILD='1795546380';let updShown=false;
 async function checkUpdate(){if(updShown||location.protocol==='file:')return;try{const r=await fetch('version.txt?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const v=(await r.text()).trim();
  if(v&&v!==BUILD){updShown=true;const d=document.createElement('button');d.textContent='🔄 Nouvelle version — Mettre à jour';d.style.cssText='position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%);z-index:300;border:none;border-radius:16px;padding:14px 20px;font-size:18px;font-weight:900;color:#fff;background:#4cae4c;box-shadow:0 6px 16px #0006';
   d.onclick=async()=>{save();try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.update()}catch(e){}location.reload()};document.body.appendChild(d)}}catch(e){}}
