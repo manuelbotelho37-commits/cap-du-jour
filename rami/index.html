@@ -398,7 +398,7 @@ function aiDiscard(p){if(G.phase==='over')return;
 let sel=[];
 const me=()=>G.players[0];
 const myPlay=()=>G&&G.cur===0&&G.phase==='play';
-function tapPio(){if(!G||G.cur!==0||G.phase!=='draw')return;const p=me();const id=drawPio(p);if(id==null)return;G.lastDrawn=id;G.phase='play';G.snap=snapshot();snd('card');save();render()}
+function tapPio(){if(!G||G.cur!==0||G.phase!=='draw')return;const p=me();const id=drawPio(p);if(id==null)return;p.hand.splice(p.hand.indexOf(id),1);p.hand.unshift(id);G.lastDrawn=id;G.phase='play';G.snap=snapshot();snd('card');save();render()}
 function tapDef(){if(!G||G.cur!==0)return;
  if(G.phase==='play'){if(sel.length===1)humanDiscard();else toast('Choisis une carte de ta main, puis touche « Défausser ».');return}
  if(G.phase!=='draw'||!G.def.length)return;const p=me();
@@ -585,7 +585,7 @@ function pileDown(e,fromDef){if(!G||G.cur!==0||G.phase!=='draw')return;
  const before=me().hand.length;if(fromDef)tapDef();else tapPio();
  if(me().hand.length===before||G.phase!=='play')return;
  skipClick=true;setTimeout(()=>skipClick=false,800);
- const id=fromDef?me().hand[0]:me().hand[me().hand.length-1];
+ const id=me().hand[0];
  const el=[...$('hand').children].find(c=>+c.dataset.id===id);if(!el)return;
  drag={id,el,x:e.clientX,y:e.clientY,on:false,fromPile:true};e.preventDefault()}
 $('def').addEventListener('pointerdown',e=>pileDown(e,true));
@@ -642,7 +642,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 <h3>Le jeu</h3><p>${o.decks} paquet${o.decks>1?'s':''} de 52 cartes + ${o.jokers} joker${o.jokers>1?'s':''}. Chaque joueur reçoit ${o.cards} cartes. Une carte est retournée pour commencer la défausse.</p>
 <h3>Un tour</h3><ol><li><b>Piocher</b> : touche la pioche, ou la carte du dessus de la défausse.${o.mustUseDef?' Si tu prends la défausse, tu dois poser cette carte pendant le tour.':''}${o.noDefOne?' Avec une seule carte en main, la défausse est interdite.':''}</li>
 <li><b>Poser</b> (si tu peux) : choisis tes cartes puis touche « Poser ». Tu peux choisir plusieurs combinaisons à la fois (ex. un brelan + une suite) : elles sont toutes posées d'un coup. Pour compléter une combinaison déjà posée, choisis tes cartes puis touche la combinaison.</li>
-<li><b>Prendre une carte</b> : touche la pioche ou la défausse. La carte de la défausse arrive à gauche de ta main, celle de la pioche à droite. Tu peux aussi garder le doigt dessus et la glisser directement à la place voulue dans ta main.</li>
+<li><b>Prendre une carte</b> : touche la pioche ou la défausse. La carte prise arrive tout à gauche de ta main. Tu peux aussi garder le doigt dessus et la glisser directement à la place voulue dans ta main.</li>
 <li><b>Ranger tes cartes</b> : fais glisser une carte avec le doigt pour la déplacer dans ta main (pour regrouper tes suites et tes séries). Tu peux aussi la glisser sur une combinaison posée ou sur la défausse.</li>
 <li><b>Défausser</b> : choisis une carte puis touche « Défausser » (ou touche la défausse).</li></ol>
 <h3>Les combinaisons</h3><ul><li><b>Série</b> : 3 ou 4 cartes de même valeur, de couleurs différentes (ex. 8♠ 8♥ 8♣).</li><li><b>Suite</b> : au moins 3 cartes qui se suivent, de même couleur (ex. 4♥ 5♥ 6♥). L'As se place avant le 2 ou après le Roi.</li><li>Le <b>joker</b> remplace n'importe quelle carte${o.oneJoker?' (un seul par combinaison)':''}.</li></ul>
@@ -655,7 +655,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795547544';let updShown=false;
+const BUILD='1795547599';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
