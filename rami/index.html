@@ -41,9 +41,9 @@ button{font-family:inherit;cursor:pointer}
 .opp .bk b{position:absolute;right:-8px;bottom:-6px;background:#fff;color:#1f5a25;border-radius:9px;font-size:12px;padding:0 5px;min-width:20px;text-align:center}
 .badge{display:inline-block;background:#4cae4c;color:#fff;border-radius:6px;padding:0 5px;font-size:11px;font-weight:800;margin-left:4px}
 .gmid{flex:1;display:flex;min-height:0;gap:8px;padding:4px 8px}
-.piles{display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;flex:none}
+.piles{display:flex;flex-direction:column;gap:26px;align-items:center;justify-content:center;flex:none}
 .pile{position:relative;border-radius:8px}
-.pile .cnt{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);background:#0007;border-radius:10px;font-size:12px;padding:0 7px;white-space:nowrap}
+.pile .cnt{pointer-events:none;position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);background:#0007;border-radius:10px;font-size:12px;padding:0 7px;white-space:nowrap}
 .pile.go{animation:glow 1.2s infinite}
 @keyframes glow{50%{box-shadow:0 0 0 4px #ffe066,0 0 18px #ffe066}}
 .emptyP{width:var(--w);height:calc(var(--w)*1.4);border-radius:8px;border:2px dashed #fff5}
@@ -404,7 +404,7 @@ function tapDef(){if(!G||G.cur!==0)return;
  if(G.phase!=='draw'||!G.def.length)return;const p=me();
  if(!canTakeDef(p)){toast('Avec une seule carte en main, tu ne peux pas prendre la défausse.');snd('bad');return}
  const pre=snapshot();const id=G.def.pop();p.hand.unshift(id);G.took=G.o.mustUseDef?id:null;G.lastDrawn=id;G.phase='play';G.snap=pre;snd('card');
- if(G.o.mustUseDef)toast(`Tu dois poser le ${cname(G.C[id])} pendant ce tour.`);save();render()}
+ toast(`${cname(G.C[id])} de la défausse : placé tout à gauche de ta main.`+(G.o.mustUseDef?` Tu dois le poser pendant ce tour.`:''),3000);save();render()}
 function toggleSel(id){if(!G||G.cur!==0||G.phase!=='play')return;const i=sel.indexOf(id);if(i>=0)sel.splice(i,1);else sel.push(id);render()}
 function splitSel(ids){const a=analyze(ids);if(a)return[a];if(ids.length<6)return null;
  const s=findMelds(ids,'cards',null,ids.length);return s&&s.used.size===ids.length?s.melds:null}
@@ -655,7 +655,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795547472';let updShown=false;
+const BUILD='1795547544';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
