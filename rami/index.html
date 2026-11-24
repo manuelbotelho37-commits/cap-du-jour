@@ -159,6 +159,8 @@ select{font-size:17px;padding:6px;border-radius:8px}
  <button data-go="scores">📋 Points</button>
  <button data-go="opts">⚙️ Options</button>
  <button data-go="rules">📖 Règles</button>
+ <button id="dUpd">🔄 Mettre à jour le jeu</button>
+ <div id="dVer" style="margin-top:auto;padding:10px 24px;font-size:13px;opacity:.6"></div>
 </div></div>
 <div id="modal" class="modal hidden"><div class="box" id="mbox"></div></div>
 <div id="toast"></div>
@@ -641,7 +643,10 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795546912';let updShown=false;
+const BUILD='1795547259';let updShown=false;
+async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
+$('dUpd').onclick=forceUpdate;
+$('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 async function checkUpdate(){if(updShown||location.protocol==='file:')return;try{const r=await fetch('version.txt?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const v=(await r.text()).trim();
  if(v&&v!==BUILD){updShown=true;const d=document.createElement('button');d.textContent='🔄 Nouvelle version — Mettre à jour';d.style.cssText='position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%);z-index:300;border:none;border-radius:16px;padding:14px 20px;font-size:18px;font-weight:900;color:#fff;background:#4cae4c;box-shadow:0 6px 16px #0006';
   d.onclick=async()=>{save();try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.update()}catch(e){}location.reload()};document.body.appendChild(d)}}catch(e){}}
