@@ -47,14 +47,14 @@ button{font-family:inherit;cursor:pointer}
 .pile.go{animation:glow 1.2s infinite}
 @keyframes glow{50%{box-shadow:0 0 0 4px #ffe066,0 0 18px #ffe066}}
 .emptyP{width:var(--w);height:calc(var(--w)*1.4);border-radius:8px;border:2px dashed #fff5}
-#table{flex:1;overflow:auto;display:flex;flex-wrap:wrap;align-content:flex-start;gap:12px 14px;padding:8px;background:#0002;border-radius:14px;-webkit-overflow-scrolling:touch}
+#table{flex:1;overflow:auto;display:flex;flex-wrap:wrap;align-content:flex-start;gap:16px 12px;padding:8px;background:#0002;border-radius:14px;-webkit-overflow-scrolling:touch}
 #table:empty::after{content:"Les combinaisons posées apparaîtront ici";opacity:.5;margin:auto;font-size:15px}
 .meld{display:flex;padding:4px 6px 6px;border-radius:9px;background:#0002;position:relative;--w:var(--tw)}
-.meld .card+.card{margin-left:calc(var(--tw)*-.46)}
+.meld .card+.card{margin-left:calc(var(--tw)*-.5)}
 .meld.pend{outline:3px dashed #ffe066;background:#ffe06622}
 .meld.flash{animation:fl 1.4s 2}
 @keyframes fl{50%{background:#ffe06677}}
-.meld .own{position:absolute;top:-7px;left:4px;font-size:10px;background:#0008;border-radius:6px;padding:0 5px;white-space:nowrap}
+.meld .own{position:absolute;top:-9px;left:4px;font-size:13px;z-index:2;background:#0008;border-radius:6px;padding:0 5px;white-space:nowrap}
 #status{text-align:center;font-weight:700;padding:3px 8px;font-size:15px;min-height:22px;text-shadow:0 1px 2px #0008}
 #acts{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:2px 6px 4px}
 .ab{border:none;border-radius:12px;padding:9px 13px;font-weight:800;font-size:15px;color:#1f3a20;background:#e8efe8;box-shadow:0 3px 0 #0005}
@@ -501,7 +501,7 @@ function layout(){const W=innerWidth,H=innerHeight;const n=G?me().hand.length:14
  const cw=Math.max(34,Math.min(84,H*.2/1.4,(W-20)/(1+(Math.max(n,2)-1)*.5)));
  const step=Math.min(cw*1.04,(W-20-cw)/Math.max(1,n-1));
  const r=document.documentElement.style;r.setProperty('--cw',cw+'px');r.setProperty('--ov',(step-cw)+'px');
- r.setProperty('--tw',Math.max(30,Math.min(52,W/18,H*.09))+'px');r.setProperty('--pw',Math.max(40,Math.min(70,H*.13,W*.12))+'px')}
+ r.setProperty('--tw',Math.max(40,Math.min(84,W/10.5,H*.125))+'px');r.setProperty('--pw',Math.max(40,Math.min(70,H*.13,W*.12))+'px')}
 function render(){if(!G||FAST)return;layout();const o=G.o,cur=G.players[G.cur];
  // adversaires
  $('opps').innerHTML=G.players.map((p,i)=>`<div class="opp${G.cur===i&&G.phase!=='over'?' act':''}">${i===0?'':`<div class="bk"><i></i><i></i><b>${p.hand.length}</b></div>`}<div style="min-width:0"><div class="nm">${esc(p.name)}${i===0?' (toi)':''}${p.posed?'<span class="badge">posé</span>':''}</div><div class="inf">${p.total} pts${G.cur===i&&!p.human&&G.phase!=='over'?' · joue…':''}</div></div></div>`).join('');
@@ -634,7 +634,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795545617';let updShown=false;
+const BUILD='1795546181';let updShown=false;
 async function checkUpdate(){if(updShown||location.protocol==='file:')return;try{const r=await fetch('version.txt?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const v=(await r.text()).trim();
  if(v&&v!==BUILD){updShown=true;const d=document.createElement('button');d.textContent='🔄 Nouvelle version — Mettre à jour';d.style.cssText='position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%);z-index:300;border:none;border-radius:16px;padding:14px 20px;font-size:18px;font-weight:900;color:#fff;background:#4cae4c;box-shadow:0 6px 16px #0006';
   d.onclick=async()=>{save();try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.update()}catch(e){}location.reload()};document.body.appendChild(d)}}catch(e){}}
