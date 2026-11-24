@@ -50,7 +50,7 @@ button{font-family:inherit;cursor:pointer}
 #table{flex:1;overflow:auto;display:flex;flex-wrap:wrap;align-content:flex-start;gap:12px 14px;padding:8px;background:#0002;border-radius:14px;-webkit-overflow-scrolling:touch}
 #table:empty::after{content:"Les combinaisons posées apparaîtront ici";opacity:.5;margin:auto;font-size:15px}
 .meld{display:flex;padding:4px 6px 6px;border-radius:9px;background:#0002;position:relative;--w:var(--tw)}
-.meld .card+.card{margin-left:calc(var(--tw)*-.52)}
+.meld .card+.card{margin-left:calc(var(--tw)*-.46)}
 .meld.pend{outline:3px dashed #ffe066;background:#ffe06622}
 .meld.flash{animation:fl 1.4s 2}
 @keyframes fl{50%{background:#ffe06677}}
@@ -70,11 +70,12 @@ button{font-family:inherit;cursor:pointer}
 @keyframes nw{from{transform:translateY(-60%);opacity:0}}
 /* cartes */
 .card{width:var(--w);height:calc(var(--w)*1.4);border-radius:calc(var(--w)*.1);background:linear-gradient(#fff,#f1f1ec);box-shadow:0 1px 3px #0007;position:relative;color:#1a1a1a;flex:none;overflow:hidden}
-.card.red{color:#cf1b1b}
-.card .ix{position:absolute;left:5%;top:2%;font-size:calc(var(--w)*.32);line-height:.9;font-weight:800;text-align:center;letter-spacing:-.04em}
-.card .ix i{display:block;font-style:normal;font-size:.8em}
-.card .ctr{position:absolute;left:0;right:0;bottom:6%;top:34%;display:flex;align-items:center;justify-content:center;font-size:calc(var(--w)*.56)}
-.card .fc{position:absolute;right:8%;bottom:8%;width:58%;height:56%;border-radius:calc(var(--w)*.06);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:calc(var(--w)*.36);line-height:.95;border:calc(var(--w)*.03) solid currentColor;background:linear-gradient(#fff6d8,#f3dfa0)}
+.card.c1{color:#d40f0f}.card.c2{color:#1257d6}.card.c3{color:#0f8a2b}.card.c0{color:#111}
+.card{border:1.5px solid #9a9a90}
+.card .ix{position:absolute;left:4%;top:1%;font-size:calc(var(--w)*.4);line-height:.88;font-weight:900;text-align:center;letter-spacing:-.05em;-webkit-text-stroke:calc(var(--w)*.012) currentColor}
+.card .ix i{display:block;font-style:normal;font-size:.85em;-webkit-text-stroke:0}
+.card .ctr{position:absolute;left:8%;right:0;bottom:4%;top:38%;display:flex;align-items:center;justify-content:center;font-size:calc(var(--w)*.72);line-height:1}
+.card .fc{position:absolute;right:7%;bottom:6%;width:60%;height:56%;border-radius:calc(var(--w)*.06);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:calc(var(--w)*.42);line-height:.95;border:calc(var(--w)*.045) solid currentColor;background:linear-gradient(#fff6d8,#f3dfa0)}
 .card .fc i{font-style:normal;font-size:.75em}
 .card.jk .ctr{font-size:calc(var(--w)*.62);background:conic-gradient(from 0deg,#f33,#fb2,#3c3,#39f,#a4f,#f33);-webkit-background-clip:text;background-clip:text;color:transparent}
 .card.jk .ix{font-size:calc(var(--w)*.16);writing-mode:vertical-rl;letter-spacing:.05em;color:#7a2bd0}
@@ -166,7 +167,7 @@ select{font-size:17px;padding:6px;border-radius:8px}
 const KEY='rami_v1';
 const DEF={names:['Sud','Nord','Est','Nord-Est'],nP:4,speed:3,sound:true,limit:300,decks:2,jokers:4,cards:14,firstPts:51,
  tierce:false,tierceFr:false,secNoMin:true,noJokerFirst:false,oneJoker:false,jokerZero:false,mustUseDef:true,noDefOne:true,
- mustJoker:true,finishDiscard:true,asVal:11,doubleSec:true,notPosed100:true,winPts:40,jokerHand:20};
+ mustJoker:true,finishDiscard:true,asVal:11,doubleSec:true,notPosed100:true,winPts:40,jokerHand:20,fourColors:true};
 let S={opts:{...DEF},game:null,sort:'suit'};
 try{const d=JSON.parse(localStorage.getItem(KEY));if(d){S=Object.assign(S,d);S.opts=Object.assign({...DEF},d.opts||{})}}catch(e){}
 let G=S.game;
@@ -450,9 +451,9 @@ function humanHelp(){if(!myPlay())return;const p=me();
 /* ============ AFFICHAGE ============ */
 function cardHTML(id,extra=''){const c=G.C[id];
  if(c.j)return`<div class="card jk ${extra}" data-id="${id}"><div class="ix">JOKER</div><div class="ctr">★</div></div>`;
- const red=c.s===1||c.s===2?' red':'';
+ const col=' c'+(S.opts.fourColors?c.s:(c.s===2?1:c.s===3?0:c.s));
  const body=c.r>=11?`<div class="fc">${lab(c.r)}<i>${SU[c.s]}</i></div>`:`<div class="ctr">${SU[c.s]}</div>`;
- return`<div class="card${red} ${extra}" data-id="${id}"><div class="ix">${lab(c.r)}<i>${SU[c.s]}</i></div>${body}</div>`}
+ return`<div class="card${col} ${extra}" data-id="${id}"><div class="ix">${lab(c.r)}<i>${SU[c.s]}</i></div>${body}</div>`}
 const backHTML=()=>`<div class="card back"></div>`;
 function sortedHand(){const p=me();const C=G.C;const h=p.hand.slice();
  const key=S.sort==='rank'?(id=>{const c=C[id];return c.j?999:(c.r===1?14:c.r)*10+c.s}):(id=>{const c=C[id];return c.j?999:c.s*20+(c.r===1?14:c.r)});
@@ -461,7 +462,7 @@ function layout(){const W=innerWidth,H=innerHeight;const n=G?me().hand.length:14
  const cw=Math.max(34,Math.min(84,H*.2/1.4,(W-20)/(1+(Math.max(n,2)-1)*.5)));
  const step=Math.min(cw*1.04,(W-20-cw)/Math.max(1,n-1));
  const r=document.documentElement.style;r.setProperty('--cw',cw+'px');r.setProperty('--ov',(step-cw)+'px');
- r.setProperty('--tw',Math.max(26,Math.min(46,W/20,H*.085))+'px');r.setProperty('--pw',Math.max(40,Math.min(70,H*.13,W*.12))+'px')}
+ r.setProperty('--tw',Math.max(30,Math.min(52,W/18,H*.09))+'px');r.setProperty('--pw',Math.max(40,Math.min(70,H*.13,W*.12))+'px')}
 function render(){if(!G||FAST)return;layout();const o=G.o,cur=G.players[G.cur];
  // adversaires
  $('opps').innerHTML=G.players.map((p,i)=>`<div class="opp${G.cur===i&&G.phase!=='over'?' act':''}">${i===0?'':`<div class="bk"><i></i><i></i><b>${p.hand.length}</b></div>`}<div style="min-width:0"><div class="nm">${esc(p.name)}${i===0?' (toi)':''}${p.posed?'<span class="badge">posé</span>':''}</div><div class="inf">${p.total} pts${G.cur===i&&!p.human&&G.phase!=='over'?' · joue…':''}</div></div></div>`).join('');
@@ -541,6 +542,7 @@ const OPTS=[
  {k:'names',t:'names',l:'Noms des joueurs'},
  {k:'speed',t:'choice',l:'Vitesse de jeu',ch:['Lente','Normale','Rapide','Très rapide']},
  {k:'sound',t:'bool',l:'Son'},
+ {k:'fourColors',t:'bool',l:'Cartes 4 couleurs (♠ noir, ♥ rouge, ♦ bleu, ♣ vert)'},
  {sec:'JEU',note:'Les règles du jeu s\'appliquent à la prochaine partie.'},
  {k:'nP',t:'range',l:'Nombre de joueurs',min:2,max:4},
  {k:'limit',t:'range',l:'Nombre de points par partie',min:100,max:1000,step:50},
@@ -592,7 +594,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795545272';let updShown=false;
+const BUILD='1795545442';let updShown=false;
 async function checkUpdate(){if(updShown||location.protocol==='file:')return;try{const r=await fetch('version.txt?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const v=(await r.text()).trim();
  if(v&&v!==BUILD){updShown=true;const d=document.createElement('button');d.textContent='🔄 Nouvelle version — Mettre à jour';d.style.cssText='position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translateX(-50%);z-index:300;border:none;border-radius:16px;padding:14px 20px;font-size:18px;font-weight:900;color:#fff;background:#4cae4c;box-shadow:0 6px 16px #0006';
   d.onclick=async()=>{save();try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.update()}catch(e){}location.reload()};document.body.appendChild(d)}}catch(e){}}
