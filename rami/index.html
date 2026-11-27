@@ -182,6 +182,9 @@ input[type=range]{accent-color:var(--gold)}
 #table{gap:12px 8px;padding:12px 6px 6px}
 .meld{padding:3px 4px 4px}
 .meld .card+.card{margin-left:calc(var(--tw)*-.52)}
+/* carte à poser obligatoirement : pointillés orange, bien différente d'une carte choisie */
+#hand .card.must{box-shadow:0 2px 5px #000a;outline:3px dashed #f5a524;outline-offset:2px}
+#hand .card.must.sel{box-shadow:0 0 0 3px var(--gold2),0 6px 14px #000c}
 </style>
 </head>
 <body>
@@ -474,14 +477,17 @@ function toggleSel(id){if(!G||G.cur!==0||G.phase!=='play')return;const i=sel.ind
 function splitSel(ids){const a=analyze(ids);if(a)return[a];if(ids.length<6)return null;
  const s=findMelds(ids,'cards',null,ids.length);return s&&s.used.size===ids.length?s.melds:null}
 function humanPose(){if(!myPlay())return;const p=me();
- const ms=splitSel(sel);
+ let ms=splitSel(sel);
+ /* la carte prise dans la défausse (ou le joker récupéré) doit être posée : si elle manque à la sélection et la complète, on l'ajoute */
+ if(!ms){const extra=[G.took,...G.mustJoker].filter((id,i,a)=>id!=null&&a.indexOf(id)===i&&p.hand.includes(id)&&!sel.includes(id));
+  if(extra.length){const s2=sel.concat(extra),ms2=splitSel(s2);if(ms2){sel=s2;ms=ms2;var addMsg=`${extra.map(id=>cname(G.C[id])).join(', ')} ajouté à ta pose. `;toast(addMsg,2500)}}}
  if(!ms){if(sel.length>=6){const s=findMelds(sel,'cards',null,sel.length);
    if(s){const left=sel.filter(id=>!s.used.has(id));toast(`Ces cartes ne vont dans aucune combinaison : ${left.map(id=>cname(G.C[id])).join(', ')}. Enlève-les de ta sélection.`,3500);sel=left.length<sel.length?sel:sel;snd('bad');return}}
   toast(whyBad(sel));snd('bad');return}
  const rem=p.hand.length-sel.length;if(G.o.finishDiscard&&rem<1){toast('Garde une carte pour la défausser à la fin.');snd('bad');return}
  for(const a of ms){const m=Object.assign({id:++G.mid,owner:0},a);p.hand=p.hand.filter(id=>!a.ids.includes(id));
   if(p.posed)G.melds.push(m);else G.pending.push(m)}
- if(ms.length>1)toast(`${ms.length} combinaisons posées d'un coup !`);
+ if(ms.length>1)toast((typeof addMsg==='string'?addMsg:'')+`${ms.length} combinaisons posées d'un coup !`,3000);
  sel=[];snd('pose');afterHumanAct()}
 function commitPending(){const p=me();for(const m of G.pending)G.melds.push(m);G.pending=[];p.posed=true}
 function humanValidate(){if(!myPlay()||!G.pending.length)return;
@@ -735,7 +741,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795800676';let updShown=false;
+const BUILD='1795801164';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
