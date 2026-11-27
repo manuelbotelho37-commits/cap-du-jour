@@ -546,18 +546,24 @@ document.addEventListener('pointermove',e=>{if(!drag)return;
   g.style.cssText=`position:fixed;left:0;top:0;margin:0;width:${r.width}px;height:${r.height}px;z-index:150;pointer-events:none;transform:rotate(4deg) scale(1.08);box-shadow:0 12px 22px #0009;--w:${r.width}px`;
   document.body.appendChild(g);drag.g=g;drag.el.style.opacity='.3'}
  drag.g.style.left=(e.clientX-drag.ox)+'px';drag.g.style.top=(e.clientY-drag.oy)+'px';
- clearHov();const hr=$('hand').getBoundingClientRect();
- if(e.clientY>hr.top-20){const t=document.elementFromPoint(e.clientX,e.clientY);const sl=t&&t.closest('#hand .slot');if(sl)sl.classList.add('hov')}
+ clearHov();const gc=ghostCenter(drag,e),ns=nearestSlot(gc.x,gc.y);
+ if(ns)ns.classList.add('hov');
  else if(myPlay()){const t=dropTarget(e.clientX,e.clientY);if(t)t.el.classList.add('hov')}});
+/* case la plus proche du centre de la carte qu'on déplace (pas besoin de viser pile) */
+function ghostCenter(d,e){if(!d||!d.g)return{x:e.clientX,y:e.clientY};const r=d.g.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}}
+function nearestSlot(x,y){const hr=$('hand').getBoundingClientRect();if(y<hr.top-20)return null;let best=null,bd=1e12;
+ for(const sl of document.querySelectorAll('#hand .slot')){const r=sl.getBoundingClientRect();const dx=x-(r.left+r.width/2),dy=(y-(r.top+r.height/2))*1.2;const dd=dx*dx+dy*dy;if(dd<bd){bd=dd;best=sl}}
+ return best}
 function endDrag(e,cancel){if(!drag)return;const d=drag;drag=null;clearHov();
  if(!d.on){if(!cancel&&!d.fromPile)toggleSel(d.id);return}
+ const gc=ghostCenter(d,e),slt=cancel?null:nearestSlot(gc.x,gc.y);
  d.g.remove();d.el.style.opacity='';const p=me();
- const t=cancel?null:dropTarget(e.clientX,e.clientY);
- if(t&&myPlay()&&!d.fromPile&&e.clientY<$('hand').getBoundingClientRect().top-20){
+ const t=cancel||slt?null:dropTarget(e.clientX,e.clientY);
+ if(t&&myPlay()&&!d.fromPile){
   if(t.k==='meld'){if(!sel.includes(d.id))sel=[d.id];tapMeld(+t.el.dataset.m,t.el.dataset.p==='1');return}
   if(t.k==='def'){sel=[d.id];humanDiscard();if(G.cur===0)render();return}
   if(t.k==='table'){if(sel.includes(d.id)&&sel.length>=3){humanPose();return}toast('Choisis au moins 3 cartes (touche-les), puis glisse-les sur la table ou touche « Poser ».');render();return}}
- if(!cancel&&e.clientY>$('hand').getBoundingClientRect().top-20){const t=document.elementFromPoint(e.clientX,e.clientY);const sl=t&&t.closest('#hand .slot');
+ {const sl=slt;
   if(sl&&G.slot&&G.slot[d.id]!=null){const to=+sl.dataset.s,from=G.slot[d.id];if(to!==from){const other=Object.keys(G.slot).find(k=>G.slot[k]===to);if(other!=null)G.slot[other]=from;G.slot[d.id]=to;p.hand.sort((a,b)=>G.slot[a]-G.slot[b])}}}
  save();render()}
 document.addEventListener('pointerup',e=>endDrag(e,false));
@@ -742,7 +748,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795802534';let updShown=false;
+const BUILD='1795803030';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
