@@ -549,6 +549,17 @@ document.addEventListener('pointermove',e=>{if(!drag)return;
  clearHov();const gc=ghostCenter(drag,e),ns=nearestSlot(gc.x,gc.y);
  if(ns)ns.classList.add('hov');
  else if(myPlay()){const t=dropTarget(e.clientX,e.clientY);if(t)t.el.classList.add('hov')}});
+/* poser une carte dans une case : si elle est prise, on écarte les cartes vers la droite (ou la gauche) sans en enlever */
+function placeAt(id,to){const sl=G.slot,p=me();delete sl[id];
+ const occ={};for(const k of Object.keys(sl))if(p.hand.includes(+k))occ[sl[k]]=+k;
+ if(occ[to]==null){sl[id]=to;return}
+ const cols=+getComputedStyle(document.documentElement).getPropertyValue('--hc')||10,total=Math.max(NSLOT,p.hand.length+1);
+ const rs=Math.floor(to/cols)*cols,re=Math.min(total,rs+cols);
+ const shift=(lo,hi)=>{ // cherche une case vide entre lo et hi (inclus), du côté le plus proche
+  for(let j=to+1;j<=hi;j++)if(occ[j]==null){for(let k=j;k>to;k--){sl[occ[k-1]]=k}sl[id]=to;return true}
+  for(let j=to-1;j>=lo;j--)if(occ[j]==null){for(let k=j;k<to;k++){sl[occ[k+1]]=k}sl[id]=to;return true}
+  return false};
+ if(shift(rs,re-1))return;if(shift(0,total-1))return;sl[id]=to}
 /* case la plus proche du centre de la carte qu'on déplace (pas besoin de viser pile) */
 function ghostCenter(d,e){if(!d||!d.g)return{x:e.clientX,y:e.clientY};const r=d.g.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}}
 function nearestSlot(x,y){const hr=$('hand').getBoundingClientRect();if(y<hr.top-20)return null;let best=null,bd=1e12;
@@ -564,7 +575,7 @@ function endDrag(e,cancel){if(!drag)return;const d=drag;drag=null;clearHov();
   if(t.k==='def'){sel=[d.id];humanDiscard();if(G.cur===0)render();return}
   if(t.k==='table'){if(sel.includes(d.id)&&sel.length>=3){humanPose();return}toast('Choisis au moins 3 cartes (touche-les), puis glisse-les sur la table ou touche « Poser ».');render();return}}
  {const sl=slt;
-  if(sl&&G.slot&&G.slot[d.id]!=null){const to=+sl.dataset.s,from=G.slot[d.id];if(to!==from){const other=Object.keys(G.slot).find(k=>G.slot[k]===to);if(other!=null)G.slot[other]=from;G.slot[d.id]=to;p.hand.sort((a,b)=>G.slot[a]-G.slot[b])}}}
+  if(sl&&G.slot&&G.slot[d.id]!=null){const to=+sl.dataset.s,from=G.slot[d.id];if(to!==from){placeAt(d.id,to);p.hand.sort((a,b)=>G.slot[a]-G.slot[b])}}}
  save();render()}
 document.addEventListener('pointerup',e=>endDrag(e,false));
 document.addEventListener('pointercancel',e=>endDrag(e,true));
@@ -748,7 +759,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795803030';let updShown=false;
+const BUILD='1795803255';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
