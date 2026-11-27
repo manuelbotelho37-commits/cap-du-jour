@@ -621,12 +621,11 @@ function render(){if(!G||FAST)return;layout();requestAnimationFrame(()=>{fitPile
  $('status').textContent=st;
  let b='';
  if(myPlay()){
-  b+=`<button class="ab" id="aHelp">💡 Aide</button><button class="ab" id="aSort">Trier par ${S.sort==='rank'?'couleur':'valeur'}</button>`;
   if(sel.length>=3)b+=`<button class="ab g" id="aPose">Poser</button>`;
   if(!p.posed&&G.pending.length)b+=`<button class="ab g" id="aVal">Valider ma pose</button>`;
   if(sel.length===1)b+=`<button class="ab o" id="aDis">Défausser</button>`;
   if(G.snap)b+=`<button class="ab" id="aUndo">↶ Annuler</button>`;
- }else if(G.cur===0&&G.phase==='draw')b+=`<button class="ab" id="aSort">Trier par ${S.sort==='rank'?'couleur':'valeur'}</button>`;
+ }
  else if(G.phase==='over')b+=`<button class="ab g" id="aNext">${G.over?'Résultat final':'Voir les points'}</button>`;
  $('acts').innerHTML=b;
  const on=(i,f)=>{const e=$(i);if(e)e.onclick=f};
@@ -741,7 +740,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795801164';let updShown=false;
+const BUILD='1795801699';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
