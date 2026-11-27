@@ -189,6 +189,11 @@ input[type=range]{accent-color:var(--gold)}
 .gmid .piles{order:2}
 /* défausse en haut, pioche en bas */
 .piles #pio{order:2}
+/* bouton « Jeter » : en or, tout à droite, sous la défausse */
+.bar{position:relative}
+#aDis{position:absolute;right:10px;top:50%;transform:translateY(-50%);min-width:150px;padding:12px 22px;font-size:19px;letter-spacing:.06em;background:linear-gradient(160deg,#f0d78c,#d4a94e 55%,#b8862e);color:#1a1508;border:1px solid #f3e2a6;box-shadow:0 4px 14px #000c,inset 0 1px 0 #fff8,0 0 12px #d4a94e55}
+#aDis:active{transform:translateY(calc(-50% + 2px))}
+@media (max-width:600px){#aDis{position:static;transform:none}}
 </style>
 </head>
 <body>
@@ -477,7 +482,7 @@ function slotRight(id){const p=me();if(!G.slot||typeof G.slot!=='object')G.slot=
  if(put!=null)G.slot[id]=put;}
 function tapPio(){if(!G||G.cur!==0||G.phase!=='draw')return;const p=me();const id=drawPio(p);if(id==null)return;p.hand.splice(p.hand.indexOf(id),1);p.hand.unshift(id);slotRight(id);G.lastDrawn=id;G.phase='play';G.snap=snapshot();snd('card');save();render()}
 function tapDef(){if(!G||G.cur!==0)return;
- if(G.phase==='play'){if(sel.length===1)humanDiscard();else toast('Choisis une carte de ta main, puis touche « Défausser ».');return}
+ if(G.phase==='play'){if(sel.length===1)humanDiscard();else toast('Choisis une carte de ta main, puis touche « Jeter ».');return}
  if(G.phase!=='draw'||!G.def.length)return;const p=me();
  if(!canTakeDef(p)){toast('Avec une seule carte en main, tu ne peux pas prendre la défausse.');snd('bad');return}
  const pre=snapshot();const id=G.def.pop();p.hand.unshift(id);slotRight(id);G.took=G.o.mustUseDef?id:null;G.lastDrawn=id;G.phase='play';G.snap=pre;snd('card');
@@ -653,7 +658,7 @@ function render(){if(!G||FAST)return;layout();requestAnimationFrame(()=>{fitPile
  if(myPlay()){
   if(sel.length>=3)b+=`<button class="ab g" id="aPose">Poser</button>`;
   if(!p.posed&&G.pending.length)b+=`<button class="ab g" id="aVal">Valider ma pose</button>`;
-  if(sel.length===1)b+=`<button class="ab o" id="aDis">Défausser</button>`;
+  if(sel.length===1)b+=`<button class="ab o" id="aDis">Jeter</button>`;
   if(G.snap)b+=`<button class="ab" id="aUndo">↶ Annuler</button>`;
  }
  else if(G.phase==='over')b+=`<button class="ab g" id="aNext">${G.over?'Résultat final':'Voir les points'}</button>`;
@@ -759,7 +764,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 <li><b>Poser</b> (si tu peux) : choisis tes cartes puis touche « Poser ». Tu peux choisir plusieurs combinaisons à la fois (ex. un brelan + une suite) : elles sont toutes posées d'un coup. Pour compléter une combinaison déjà posée, choisis tes cartes puis touche la combinaison.</li>
 <li><b>Prendre une carte</b> : touche la pioche ou la défausse. La carte prise arrive tout à gauche de ta main. Tu peux aussi garder le doigt dessus et la glisser directement à la place voulue dans ta main.</li>
 <li><b>Ranger tes cartes</b> : fais glisser une carte avec le doigt pour la déplacer dans ta main (pour regrouper tes suites et tes séries). Tu peux aussi la glisser sur une combinaison posée ou sur la défausse.</li>
-<li><b>Défausser</b> : choisis une carte puis touche « Défausser » (ou touche la défausse).</li></ol>
+<li><b>Défausser</b> : choisis une carte puis touche le bouton doré « Jeter », tout à droite (ou touche la défausse).</li></ol>
 <h3>Les combinaisons</h3><ul><li><b>Série</b> : 3 ou 4 cartes de même valeur, de couleurs différentes (ex. 8♠ 8♥ 8♣).</li><li><b>Suite</b> : au moins 3 cartes qui se suivent, de même couleur (ex. 4♥ 5♥ 6♥). L'As se place avant le 2 ou après le Roi.</li><li>Le <b>joker</b> remplace n'importe quelle carte${o.oneJoker?' (un seul par combinaison)':''}.</li></ul>
 <h3>La première pose</h3><p>Il faut poser au moins <b>${o.firstPts} points</b> d'un coup${o.tierce?', avec une tierce':''}${o.tierceFr?', avec une tierce franche (sans joker)':''}${o.noJokerFirst?', sans joker':''}. Pose plusieurs combinaisons, le total s'affiche, puis touche « Valider ma pose » (ou défausse directement). ${o.secNoMin?'Pas de minimum si tu poses toutes tes cartes en une fois (Rami sec).':''}</p>
 <p>Ensuite seulement, tu peux compléter les combinaisons des autres et <b>récupérer un joker</b> : choisis la carte qu'il remplace, puis touche la combinaison.${o.mustJoker?' Le joker récupéré doit être posé dans le même tour.':''}</p>
@@ -770,7 +775,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795807146';let updShown=false;
+const BUILD='1795809355';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
