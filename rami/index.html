@@ -60,12 +60,11 @@ button{font-family:inherit;cursor:pointer}
 .ab{border:none;border-radius:12px;padding:9px 13px;font-weight:800;font-size:15px;color:#1f3a20;background:#e8efe8;box-shadow:0 3px 0 #0005}
 .ab.g{background:#5cb85c;color:#fff}.ab.o{background:#ffb02e;color:#3a2400}.ab.r{background:#e2574c;color:#fff}
 .ab:active{transform:translateY(2px)}
-#hand{display:flex;justify-content:center;align-items:flex-end;padding:calc(var(--cw)*.32) 8px calc(env(safe-area-inset-bottom) + 10px);--w:var(--cw);min-height:calc(var(--cw)*1.72 + 12px)}
+#hand{display:flex;flex-wrap:wrap;justify-content:center;align-content:flex-end;align-items:flex-end;gap:var(--hgy) var(--hgx);padding:calc(var(--cw)*.2) 8px calc(env(safe-area-inset-bottom) + 10px);--w:var(--cw);width:100%;max-width:var(--hw);margin:0 auto;min-height:calc(var(--cw)*1.4*3 + var(--hgy)*2 + var(--cw)*.2 + 12px)}
 #hand{touch-action:none}
 #hand .card{transition:transform .15s}
 .meld.hov,#def.hov,#table.hov{box-shadow:0 0 0 4px #3aa0ff,0 0 16px #3aa0ff}
-#hand .card+.card{margin-left:var(--ov)}
-#hand .card.sel{transform:translateY(-24%);box-shadow:0 0 0 3px #3aa0ff,0 4px 8px #0008}
+#hand .card.sel{transform:translateY(-16%);box-shadow:0 0 0 3px #3aa0ff,0 4px 8px #0008}
 #hand .card.must{box-shadow:0 0 0 3px #ffb02e,0 0 12px #ffb02e}
 #hand .card.must.sel{box-shadow:0 0 0 3px #3aa0ff,0 0 14px #ffb02e}
 #hand .card.new{animation:nw .5s}
@@ -475,8 +474,9 @@ document.addEventListener('pointermove',e=>{if(!drag)return;
  drag.g.style.left=(e.clientX-drag.ox)+'px';drag.g.style.top=(e.clientY-drag.oy)+'px';
  clearHov();const hr=$('hand').getBoundingClientRect();
  if(e.clientY>hr.top-20){const cs=[...$('hand').children];if(cs.length>1){
-   const step=cs[1].getBoundingClientRect().left-cs[0].getBoundingClientRect().left;let before=null;
-   for(const c of cs){if(c===drag.el)continue;const r=c.getBoundingClientRect();if(e.clientX<r.left+step/2){before=c;break}}
+   let before=null;
+   for(const c of cs){if(c===drag.el)continue;const r=c.getBoundingClientRect();
+    if(e.clientY<r.top-4||(e.clientY<=r.bottom+4&&e.clientX<r.left+r.width/2)){before=c;break}}
    if(before!==drag.el.nextSibling&&before!==drag.el)$('hand').insertBefore(drag.el,before)}}
  else if(myPlay()){const t=dropTarget(e.clientX,e.clientY);if(t)t.el.classList.add('hov')}});
 function endDrag(e,cancel){if(!drag)return;const d=drag;drag=null;clearHov();
@@ -506,9 +506,10 @@ function sortedHand(mode){mode=mode||S.sort;const p=me();const C=G.C;const h=p.h
  const key=mode==='rank'?(id=>{const c=C[id];return c.j?999:(c.r===1?14:c.r)*10+c.s}):(id=>{const c=C[id];return c.j?999:c.s*20+(c.r===1?14:c.r)});
  return h.sort((a,b)=>key(a)-key(b))}
 function layout(){const W=innerWidth,H=innerHeight;const n=G?me().hand.length:14;
- const cw=Math.max(34,Math.min(84,H*.2/1.4,(W-20)/(1+(Math.max(n,2)-1)*.5)));
- const step=Math.min(cw*1.04,(W-20-cw)/Math.max(1,n-1));
- const r=document.documentElement.style;r.setProperty('--cw',cw+'px');r.setProperty('--ov',(step-cw)+'px');
+ /* main sur 3 lignes */
+ const per=Math.max(5,Math.ceil(n/3)),gx=6,gy=8;
+ const cw=Math.max(34,Math.min(92,(W-16-(per-1)*gx)/per,(H*.5-2*gy-12)/(3*1.4+.2)));
+ const r=document.documentElement.style;r.setProperty('--cw',cw+'px');r.setProperty('--hgx',gx+'px');r.setProperty('--hgy',gy+'px');r.setProperty('--hw',(per*cw+(per-1)*gx+17)+'px');
  r.setProperty('--tw',Math.max(40,Math.min(84,W/10.5,H*.125))+'px');r.setProperty('--pw',Math.max(40,Math.min(70,H*.13,W*.12))+'px')}
 function render(){if(!G||FAST)return;layout();const o=G.o,cur=G.players[G.cur];
  // adversaires
@@ -655,7 +656,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795547599';let updShown=false;
+const BUILD='1795799516';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
