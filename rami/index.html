@@ -522,6 +522,10 @@ function afterHumanAct(){const p=me();
  if(!p.hand.length&&!G.o.finishDiscard){
   if(G.pending.length){if(!firstPoseOK(G.pending,true)){toast(firstPoseWhy(G.pending));render();return}commitPending()}
   if(G.took!=null&&p.hand.includes(G.took))return;save();endRound(p);return}
+ /* il ne reste qu'une carte : elle part toute seule à la défausse et la donne est gagnée */
+ if(G.o.finishDiscard&&p.hand.length===1&&myPlay()){const last=p.hand[0];
+  if(last!==G.took&&!G.mustJoker.includes(last)&&(!G.pending.length||firstPoseOK(G.pending,true))){
+   sel=[last];save();humanDiscard();toast(`Dernière carte (${cname(G.C[last])}) défaussée : tu as fini !`,2500);return}}
  save();render()}
 function humanDiscard(){if(!myPlay())return;const p=me();
  if(sel.length!==1){toast('Choisis UNE carte à défausser.');return}
@@ -764,7 +768,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795804383';let updShown=false;
+const BUILD='1795804525';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
