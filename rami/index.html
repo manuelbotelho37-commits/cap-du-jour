@@ -185,6 +185,8 @@ input[type=range]{accent-color:var(--gold)}
 /* carte à poser obligatoirement : pointillés orange, bien différente d'une carte choisie */
 #hand .card.must{box-shadow:0 2px 5px #000a;outline:3px dashed #f5a524;outline-offset:2px}
 #hand .card.must.sel{box-shadow:0 0 0 3px var(--gold2),0 6px 14px #000c}
+/* pioche et défausse à droite de la table */
+.gmid .piles{order:2}
 </style>
 </head>
 <body>
@@ -740,7 +742,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795801699';let updShown=false;
+const BUILD='1795802110';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
