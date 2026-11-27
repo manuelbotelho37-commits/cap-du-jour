@@ -473,8 +473,8 @@ function tapDef(){if(!G||G.cur!==0)return;
  if(G.phase==='play'){if(sel.length===1)humanDiscard();else toast('Choisis une carte de ta main, puis touche « Défausser ».');return}
  if(G.phase!=='draw'||!G.def.length)return;const p=me();
  if(!canTakeDef(p)){toast('Avec une seule carte en main, tu ne peux pas prendre la défausse.');snd('bad');return}
- const pre=snapshot();const id=G.def.pop();p.hand.unshift(id);G.took=G.o.mustUseDef?id:null;G.lastDrawn=id;G.phase='play';G.snap=pre;snd('card');
- toast(`${cname(G.C[id])} de la défausse : placé dans la première case libre de ta main.`+(G.o.mustUseDef?` Tu dois le poser pendant ce tour.`:''),3000);save();render()}
+ const pre=snapshot();const id=G.def.pop();p.hand.unshift(id);{if(!G.slot||typeof G.slot!=='object')G.slot={};const used=new Set(Object.entries(G.slot).filter(([k])=>p.hand.includes(+k)&&+k!==id).map(([,v])=>v));let i=NSLOT-1;while(i>=0&&used.has(i))i--;if(i>=0)G.slot[id]=i;}G.took=G.o.mustUseDef?id:null;G.lastDrawn=id;G.phase='play';G.snap=pre;snd('card');
+ toast(`${cname(G.C[id])} de la défausse : placé en bas à droite de ta main.`+(G.o.mustUseDef?` Tu dois le poser pendant ce tour.`:''),3000);save();render()}
 function toggleSel(id){if(!G||G.cur!==0||G.phase!=='play')return;const i=sel.indexOf(id);if(i>=0)sel.splice(i,1);else sel.push(id);render()}
 function splitSel(ids){const a=analyze(ids);if(a)return[a];if(ids.length<6)return null;
  const s=findMelds(ids,'cards',null,ids.length);return s&&s.used.size===ids.length?s.melds:null}
@@ -742,7 +742,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795802110';let updShown=false;
+const BUILD='1795802534';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
