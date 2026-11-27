@@ -176,6 +176,12 @@ input[type=range]{accent-color:var(--gold)}
 .rules h3{color:var(--gold2)}
 .names input{min-width:0;width:100%}
 #toast{background:#17171af2;color:var(--txt);border:1px solid var(--gold)}
+/* plus de place pour la table */
+.bar{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;column-gap:12px;padding:2px 6px}
+.bar #status{padding:2px 4px}.bar #acts{padding:2px 0}
+#table{gap:12px 8px;padding:12px 6px 6px}
+.meld{padding:3px 4px 4px}
+.meld .card+.card{margin-left:calc(var(--tw)*-.52)}
 </style>
 </head>
 <body>
@@ -193,8 +199,7 @@ input[type=range]{accent-color:var(--gold)}
 <section id="game" class="scr hidden">
  <div class="gtop"><button class="burger" data-menu style="width:46px;height:46px;font-size:24px">☰</button><div id="opps"></div></div>
  <div class="gmid"><div class="piles"><div id="pio" class="pile"></div><div id="def" class="pile"></div></div><div id="table"></div></div>
- <div id="status"></div>
- <div id="acts"></div>
+ <div class="bar"><div id="status"></div><div id="acts"></div></div>
  <div id="hand"></div>
 </section>
 
@@ -572,10 +577,10 @@ function sortedHand(mode){mode=mode||S.sort;const p=me();const C=G.C;const h=p.h
 function layout(){const W=innerWidth,H=innerHeight;const n=G?me().hand.length:14;
  /* main en grille de cases : 3 rangées de 10 (5 rangées de 6 sur écran étroit) */
  const cols=W>=560?10:6,rows=Math.ceil(Math.max(NSLOT,n)/cols),gx=W>=560?6:5,gy=6;
- const cw=Math.max(30,Math.min(92,(W-16-(cols-1)*gx)/cols,(H*(cols===10?.5:.55)-(rows-1)*gy-14)/(rows*1.4+.2)));
+ const cw=Math.max(30,Math.min(92,(W-16-(cols-1)*gx)/cols,(H*(cols===10?.43:.5)-(rows-1)*gy-14)/(rows*1.4+.2)));
  const r=document.documentElement.style;r.setProperty('--cw',cw+'px');r.setProperty('--hgx',gx+'px');r.setProperty('--hgy',gy+'px');r.setProperty('--hc',cols);
- r.setProperty('--tw',Math.max(40,Math.min(84,W/10.5,H*.125))+'px');if(!r.getPropertyValue('--pw'))r.setProperty('--pw',Math.max(40,Math.min(70,H*.13,W*.12))+'px')}
-function render(){if(!G||FAST)return;layout();requestAnimationFrame(fitPiles);const o=G.o,cur=G.players[G.cur];
+ if(!r.getPropertyValue('--tw'))r.setProperty('--tw',Math.max(40,Math.min(84,W/10.5,H*.125))+'px');if(!r.getPropertyValue('--pw'))r.setProperty('--pw',Math.max(40,Math.min(70,H*.13,W*.12))+'px')}
+function render(){if(!G||FAST)return;layout();requestAnimationFrame(()=>{fitPiles();fitTable()});const o=G.o,cur=G.players[G.cur];
  // adversaires
  $('opps').innerHTML=G.players.map((p,i)=>`<div class="opp${G.cur===i&&G.phase!=='over'?' act':''}">${i===0?'':`<div class="bk"><i></i><i></i><b>${p.hand.length}</b></div>`}<div style="min-width:0"><div class="nm">${esc(p.name)}${i===0?' (toi)':''}${p.posed?'<span class="badge">posé</span>':''}</div><div class="inf">${p.total} pts${G.cur===i&&!p.human&&G.phase!=='over'?' · joue…':''}</div></div></div>`).join('');
  // pioche / défausse
@@ -662,6 +667,9 @@ document.querySelectorAll('[data-menu]').forEach(b=>b.onclick=()=>$('drawer').cl
 $('drawer').onclick=e=>{if(e.target===$('drawer'))$('drawer').classList.add('hidden')};
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>show(b.dataset.go));
 window.addEventListener('resize',()=>{if(curScreen==='game')render()});
+function fitTable(){const t=$('table');if(!t||t.offsetParent===null)return;const W=innerWidth,H=innerHeight;
+ let tw=Math.max(40,Math.min(84,W/10.5,H*.125));const r=document.documentElement.style;r.setProperty('--tw',tw+'px');
+ while(t.scrollHeight>t.clientHeight+2&&tw>28){tw-=3;r.setProperty('--tw',tw+'px')}}
 function fitPiles(){const gm=document.querySelector('.gmid'),pl=document.querySelector('.piles');if(!gm||!pl||gm.offsetParent===null)return;
  const h=gm.clientHeight,W=innerWidth;let pw=Math.min(70,W*.12,(h-40)/2.9);
  if(pw<48){pl.style.flexDirection='row';pl.style.gap='10px';pw=Math.max(30,Math.min(70,W*.12,(h-26)/1.4))}else{pl.style.flexDirection='';pl.style.gap=''}
@@ -727,7 +735,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795800188';let updShown=false;
+const BUILD='1795800676';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
