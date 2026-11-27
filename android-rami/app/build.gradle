@@ -1,0 +1,23 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'fr.maisoncpr.rami'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'fr.maisoncpr.rami'
+        minSdk 24
+        targetSdk 34
+        versionCode((System.getenv('VC') ?: '1').toInteger())
+        versionName(System.getenv('VN') ?: '1.0')
+    }
+    signingConfigs {
+        release {
+            storeFile file('rami.keystore')
+            storePassword System.getenv('KS')
+            keyAlias 'rami'
+            keyPassword System.getenv('KS')
+        }
+    }
+    buildTypes {
+        release { signingConfig signingConfigs.release; minifyEnabled false }
+    }
+}
