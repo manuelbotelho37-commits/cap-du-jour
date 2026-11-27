@@ -356,7 +356,7 @@ function firstPoseWhy(melds){
 function jokerMatch(m,id){const c=G.C[id];if(c.j)return null;
  for(const jid of m.ids){if(!G.C[jid].j)continue;const rp=m.as[jid];
   if(m.type==='run'&&rp&&rp.s===c.s&&rp.r===c.r)return jid;
-  if(m.type==='set'&&c.r===m.r&&!m.ids.some(x=>!G.C[x].j&&G.C[x].s===c.s))return jid}
+  if(m.type==='set'&&c.r===m.r&&m.ids.filter(x=>!G.C[x].j).length>=3&&!m.ids.some(x=>!G.C[x].j&&G.C[x].s===c.s))return jid}
  return null}
 function setMeld(m,a){m.type=a.type;m.ids=a.ids;m.as=a.as;m.value=a.value;m.r=a.r;m.s=a.s;m.lo=a.lo;m.hi=a.hi}
 function swapJoker(p,m,id,jid){const ids=m.ids.slice();ids[ids.indexOf(jid)]=id;const a=analyze(ids);if(!a)return false;
@@ -657,7 +657,7 @@ function render(){if(!G||FAST)return;layout();requestAnimationFrame(()=>{fitPile
  if(flashIds.length){flashIds.forEach(id=>{const e=document.querySelector(`.meld[data-m="${id}"]`);if(e)e.classList.add('flash')});flashIds=[]}
 }
 function meldHTML(m,pend){const own=G.players[m.owner];
- return`<div class="meld${pend?' pend':''}" data-m="${m.id}" data-p="${pend?1:0}"><span class="own">${pend?'Ta pose':esc(own?own.name:'')}</span>${m.ids.map(id=>{const c=G.C[id];let h=cardHTML(id);if(c.j&&m.as[id]){const r=m.as[id];h=h.replace('</div></div>',`</div><div class="rep">${lab(r.r)}${SU[r.s]}</div></div>`)}return h}).join('')}</div>`}
+ return`<div class="meld${pend?' pend':''}" data-m="${m.id}" data-p="${pend?1:0}"><span class="own">${pend?'Ta pose':esc(own?own.name:'')}</span>${m.ids.map(id=>{const c=G.C[id];let h=cardHTML(id);if(c.j&&m.as[id]){const r=m.as[id];h=h.replace('</div></div>',`</div><div class="rep">${lab(r.r)}${m.type==='set'&&m.ids.filter(x=>!G.C[x].j).length<3?'':SU[r.s]}</div></div>`)}return h}).join('')}</div>`}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ============ FENÊTRES ============ */
@@ -764,7 +764,7 @@ function renderRules(){const o=S.opts;$('rulesTxt').innerHTML=`
 /* ============ DÉMARRAGE ============ */
 show('home');
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-const BUILD='1795804095';let updShown=false;
+const BUILD='1795804383';let updShown=false;
 async function forceUpdate(){save();toast('Mise à jour…');try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('rami')).map(k=>caches.delete(k)));const rg=await navigator.serviceWorker?.getRegistration();await rg?.unregister()}catch(e){}location.replace(location.pathname+'?v='+Date.now())}
 $('dUpd').onclick=forceUpdate;
 $('dVer').textContent='Version '+new Date(+BUILD*1000).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
